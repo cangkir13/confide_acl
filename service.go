@@ -37,3 +37,30 @@ func (s *Service) CreatePermission(ctx context.Context, name string) error {
 	}
 	return nil
 }
+
+func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
+	// get role id by string
+	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
+	if err != nil {
+		// Log the error or handle it as needed
+		log.Printf("Error getting role ID: %v", err)
+		return err
+	}
+
+	// get permission id by string
+	permissionIDs, err := s.repo.GetPermissionIDByName(ctx, permissions)
+	if err != nil {
+		// Log the error or handle it as needed
+		log.Printf("Error getting permission ID: %v", err)
+		return err
+	}
+
+	// assign permission to role
+	err = s.repo.GivePermissionToRole(ctx, roleIDs[0], permissionIDs)
+	if err != nil {
+		// Log the error or handle it as needed
+		log.Printf("Error assigning permission to role: %v", err)
+		return err
+	}
+	return nil
+}
