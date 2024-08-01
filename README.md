@@ -40,15 +40,15 @@ func main() {
 
 ## Functions list
 
-### func CreateRole
+### func SetRole
 ```go
-func CreateRole(ctx context.Context, name string) error
+func SetRole(ctx context.Context, name string) error
 ```
 create new role example `Admin` or others for user role name
 
-### func CreatePermission
+### func SetPermission
 ```go
-func CreatePermission(ctx context.Context, name string) error
+func SetPermission(ctx context.Context, name string) error
 ```
 create new permission example `Product.create` | `Product.update` | `Product.delete`
 
