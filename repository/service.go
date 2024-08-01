@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 type SQL struct {
@@ -85,7 +86,7 @@ func (sql *SQL) GivePermissionToRole(ctx context.Context, roleID uint, permissio
 	return nil
 }
 
-// GetRoleIDByName retrieves the role IDs from the database based on the provided role names.
+// GetRoleIDByName retrieves the IDs of roles based on their names from the database.
 //
 // Parameters:
 // - ctx: The context.Context object for the request.
@@ -98,16 +99,16 @@ func (sql *SQL) GetRoleIDByName(ctx context.Context, roles []string) ([]uint, er
 	var roleIDs []uint
 
 	// Bangun query SQL dengan placeholder untuk setiap role name
-	query := "SELECT id FROM roles WHERE name IN ("
+	placeholders := make([]string, len(roles))
 	args := make([]interface{}, len(roles))
-	for i := range roles {
-		if i > 0 {
-			query += ","
-		}
-		query += "?"
-		args[i] = roles[i]
+
+	for i, role := range roles {
+		placeholders[i] = "?"
+		args[i] = role
 	}
-	query += ")"
+
+	query := fmt.Sprintf("SELECT id FROM roles WHERE name IN (%s)",
+		strings.Join(placeholders, ","))
 
 	// Eksekusi query dan proses hasil
 	rows, err := sql.db.QueryContext(ctx, query, args...)
@@ -144,18 +145,18 @@ func (sql *SQL) GetPermissionIDByName(ctx context.Context, permissions []string)
 	var permissionIDs []uint
 
 	// Bangun query SQL dengan placeholder untuk setiap permission name
-	query := "SELECT id FROM permissions WHERE name IN ("
+	placeholders := make([]string, len(permissions))
 	args := make([]interface{}, len(permissions))
-	for i := range permissions {
-		if i > 0 {
-			query += ","
-		}
-		query += "?"
-		args[i] = permissions[i]
-	}
-	query += ")"
 
-	// Eksekusi query dan proses seleksi
+	for i, perm := range permissions {
+		placeholders[i] = "?"
+		args[i] = perm
+	}
+
+	query := fmt.Sprintf("SELECT id FROM permissions WHERE name IN (%s)",
+		strings.Join(placeholders, ","))
+
+	// Eksekusi query dan proses hasil
 	rows, err := sql.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query permissions: %w", err)
