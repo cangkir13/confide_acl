@@ -68,16 +68,8 @@ func (sql *SQL) GivePermissionToRole(ctx context.Context, roleID uint, permissio
 
 	// Persiapkan query untuk memasukkan izin
 	query := "INSERT INTO role_has_permissions (role_id, permission_id) VALUES (?, ?)"
-	stmt, err := tx.PrepareContext(ctx, query)
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to prepare statement: %w", err)
-	}
-	defer stmt.Close()
-
-	// Iterasi melalui daftar permission ID dan masukkan ke dalam role_has_permissions
 	for _, permissionID := range permissions {
-		_, err = stmt.ExecContext(ctx, roleID, permissionID)
+		_, err := tx.ExecContext(ctx, query, roleID, permissionID)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to assign permission %d to role %d: %w", permissionID, roleID, err)
