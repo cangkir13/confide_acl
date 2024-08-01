@@ -1,4 +1,4 @@
-package confideacl
+package confide_acl
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func NewService(db *sql.DB) *Service {
 	}
 }
 
-func (s *Service) CreateRole(ctx context.Context, name string) error {
+func (s *Service) SetRole(ctx context.Context, name string) error {
 	err := s.repo.CreateRole(ctx, name)
 	if err != nil {
 		// Log the error or handle it as needed
@@ -28,7 +28,7 @@ func (s *Service) CreateRole(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *Service) CreatePermission(ctx context.Context, name string) error {
+func (s *Service) SetPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
 		// Log the error or handle it as needed

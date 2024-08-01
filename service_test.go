@@ -1,4 +1,4 @@
-package confideacl
+package confide_acl
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func TestCreateRole(t *testing.T) {
 		WithArgs("admin").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = service.CreateRole(context.Background(), "admin")
+	err = service.SetRole(context.Background(), "admin")
 	require.NoError(t, err)
 	err = mock.ExpectationsWereMet()
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestCreatePermission(t *testing.T) {
 		WithArgs("read").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = service.CreatePermission(context.Background(), "read")
+	err = service.SetPermission(context.Background(), "read")
 	require.NoError(t, err)
 	err = mock.ExpectationsWereMet()
 	require.NoError(t, err)
