@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cangkir13/confide_acl/repository"
+	"github.com/eben-hk/confide"
 )
 
 type Service struct {
@@ -39,16 +40,32 @@ type ConfideACL interface {
 func AuthACL(s *Service, args string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// get username id from header
+			_, err := extractConsumerID(r.Header.Get("x-consumer-username"))
+			if err != nil {
+				confide.JSON(w, confide.Payload{
+					Code:    confide.FCodeUnauthorized,
+					Message: err.Error(),
+				})
+				return
+			}
+
 			// check permission
 			haspr, err := s.ValidateControl(r.Context(), args)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				confide.JSON(w, confide.Payload{
+					Code:    confide.FCodeUnauthorized,
+					Message: err.Error(),
+				})
 				return
 			}
 
 			// check if has permission
 			if !haspr {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				confide.JSON(w, confide.Payload{
+					Code:    confide.FCodeUnauthorized,
+					Message: "you don't have permission",
+				})
 				return
 			}
 
