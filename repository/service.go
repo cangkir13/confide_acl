@@ -177,3 +177,53 @@ func (sql *SQL) GetPermissionIDByName(ctx context.Context, permissions []string)
 
 	return permissionIDs, nil
 }
+
+func (sql *SQL) CheckRolePermission(ctx context.Context, roleID []uint, permissionID []uint) (bool, error) {
+	query := "SELECT COUNT(*) FROM role_has_permissions WHERE "
+	conditions := []string{}
+
+	// Add role condition if roles are provided
+	if len(roleID) > 0 {
+		rolePlaceholders := make([]string, len(roleID))
+		for i := range roleID {
+			rolePlaceholders[i] = "?"
+		}
+		conditions = append(conditions, fmt.Sprintf("role_id IN (%s)", strings.Join(rolePlaceholders, ",")))
+	}
+
+	// Add permission condition if permissions are provided
+	if len(permissionID) > 0 {
+		permissionPlaceholders := make([]string, len(permissionID))
+		for i := range permissionID {
+			permissionPlaceholders[i] = "?"
+		}
+		conditions = append(conditions, fmt.Sprintf("permission_id IN (%s)", strings.Join(permissionPlaceholders, ",")))
+	}
+
+	query += strings.Join(conditions, " AND ")
+
+	fmt.Println("query:", query)
+	// Create a single slice of arguments from roleID and permissionID slices
+	args := []interface{}{}
+	for _, id := range roleID {
+		args = append(args, id)
+	}
+	for _, id := range permissionID {
+		args = append(args, id)
+	}
+
+	rows, err := sql.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	var count int
+	if rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return false, err
+		}
+	}
+
+	return count > 0, nil
+}

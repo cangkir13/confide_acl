@@ -159,3 +159,66 @@ func TestGetPermissionIDByName(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
+func TestCheckRolePermission(t *testing.T) {
+	tests := []struct {
+		name           string
+		roleID         []uint
+		permissionID   []uint
+		setupMocks     func(mock sqlmock.Sqlmock)
+		expectedResult bool
+		expectError    bool
+	}{
+		{
+			name:         "Valid role and permission",
+			roleID:       []uint{1},
+			permissionID: []uint{1},
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				// role and permission rows
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM role_has_permissions WHERE role_id IN (?) AND permission_id IN (?)")).
+					WithArgs(1, 1).
+					WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+			},
+			expectedResult: true,
+			expectError:    false,
+		},
+		{
+			name:         "Valid multiple roles and permissions",
+			roleID:       []uint{1, 2},
+			permissionID: []uint{3, 4},
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				// role and permission rows
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM role_has_permissions WHERE role_id IN (?,?) AND permission_id IN (?,?)")).
+					WithArgs(1, 2, 3, 4).
+					WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+			},
+			expectedResult: true,
+			expectError:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+			}
+			defer db.Close()
+
+			tt.setupMocks(mock)
+
+			sqlInstance := repository.NewSQL(db)
+
+			ctx := context.Background()
+			result, err := sqlInstance.CheckRolePermission(ctx, tt.roleID, tt.permissionID)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v", tt.expectError, err)
+				return
+			}
+
+			if result != tt.expectedResult {
+				t.Errorf("expected result: %v, got: %v", tt.expectedResult, result)
+			}
+		})
+	}
+}
