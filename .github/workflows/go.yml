@@ -22,4 +22,4 @@ jobs:
         go-version: '1.22.3'
 
     - name: Test
-      run: go test -v -tags 'example' $(go list ./... | grep -v /example/)
+      run: go test -v ./...
