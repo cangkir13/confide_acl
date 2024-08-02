@@ -178,6 +178,16 @@ func (sql *SQL) GetPermissionIDByName(ctx context.Context, permissions []string)
 	return permissionIDs, nil
 }
 
+// CheckRolePermission checks if a role has a specific permission in the database.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - roleID: A slice of uint representing the IDs of the roles to check.
+// - permissionID: A slice of uint representing the IDs of the permissions to check.
+//
+// Returns:
+// - bool: True if the role has the permission, false otherwise.
+// - error: An error if the query fails, otherwise nil.
 func (sql *SQL) CheckRolePermission(ctx context.Context, roleID []uint, permissionID []uint) (bool, error) {
 	query := "SELECT COUNT(*) FROM role_has_permissions WHERE "
 	conditions := []string{}
@@ -202,7 +212,6 @@ func (sql *SQL) CheckRolePermission(ctx context.Context, roleID []uint, permissi
 
 	query += strings.Join(conditions, " AND ")
 
-	fmt.Println("query:", query)
 	// Create a single slice of arguments from roleID and permissionID slices
 	args := []interface{}{}
 	for _, id := range roleID {

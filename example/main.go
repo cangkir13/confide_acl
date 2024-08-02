@@ -21,13 +21,13 @@ func main() {
 	svc := confide_acl.NewService(db)
 
 	// Create a role
-	err = svc.CreateRole(context.Background(), "productor")
+	err = svc.SetRole(context.Background(), "productor")
 	if err != nil {
 		log.Fatalf("failed to create role: %v", err)
 	}
 
 	// Create a permission
-	err = svc.CreatePermission(context.Background(), "mybo.create")
+	err = svc.SetPermission(context.Background(), "mybo.create")
 	if err != nil {
 		log.Fatalf("failed to create permission: %v", err)
 	}
@@ -37,5 +37,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to assign permission to role: %v", err)
 	}
+
+	// check has permission or role
+	// example: "role:Admin" or "permission:mybo.create"
+	// or combined "role:Admin|permission:mybo.create"
+	// or multiple flag "role:Admin|permission:mybo.create,mybo.read"
+	has, err := svc.ValidateControl(context.Background(), "role:Admin")
+	if err != nil {
+		log.Fatalf("failed to validate control: %v", err)
+	}
+
+	log.Printf("has permission: %v", has)
 
 }

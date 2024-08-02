@@ -4,6 +4,15 @@ import (
 	"context"
 )
 
+// SetRole sets a new role in the system.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - name: The name of the role to be created.
+// Example:
+// service.SetRole(ctx, "admin")
+// Returns:
+// - error: An error if the role creation fails, otherwise nil.
 func (s *Service) SetRole(ctx context.Context, name string) error {
 	err := s.repo.CreateRole(ctx, name)
 	if err != nil {
@@ -12,6 +21,15 @@ func (s *Service) SetRole(ctx context.Context, name string) error {
 	return nil
 }
 
+// SetPermission sets a new permission in the system.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - name: The name of the permission to be created.
+// Example:
+//
+// Returns:
+// - error: An error if the permission creation fails, otherwise nil.
 func (s *Service) SetPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
@@ -20,6 +38,17 @@ func (s *Service) SetPermission(ctx context.Context, name string) error {
 	return nil
 }
 
+// AssignPermissionToRole assigns a list of permissions to a role in the system.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - role: The name of the role to which the permissions will be assigned.
+// - permissions: A slice of strings representing the names of the permissions to be assigned.
+//
+// Example:
+// service.AssignPermissionToRole(ctx, "admin", []string{"read", "write"})
+// Returns:
+// - error: An error if the assignment fails, otherwise nil.
 func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
 	// get role id by string
 	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
@@ -41,8 +70,16 @@ func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permi
 	return nil
 }
 
-// ACL checks if a role has the required permissions.
-// example args: role:admin|permission:read,write
+// ValidateControl validates the control by parsing the role or permission string,
+// retrieving the corresponding role and permission IDs from the repository,
+// and checking if the user has access to the specified role and permission.
+// ctx: the context.Context object for handling cancellation and timeouts.
+// args: the string representation of the role or permission.
+// example: "role:Admin" or "permission:mybo.create"
+// or combined "role:Admin|permission:mybo.create"
+// or multiple flag "role:Admin|permission:mybo.create,mybo.read"
+// Returns a boolean indicating whether the user has access to the specified role and permission,
+// and an error if any occurred during the validation process.
 func (s *Service) ValidateControl(ctx context.Context, args string) (bool, error) {
 	// parsing string role or permission
 	rp, err := parseRolePermission(args)

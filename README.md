@@ -36,7 +36,17 @@ func main() {
 	}
 }
 ```
+## Arguments list
+| Parameter | Type     | Example                |
+| :-------- | :------- | :------------------------- |
+| `name` | `string` | Read |
+| `role` | `string` | Admin |
+| `permissions` | `[]string` | []string{"Raad", "Create"} |
+| `args`        | `string`    | "role:admin" or "role:admin,product" or "permission:Read" or "permission:Read,Create" |
 
+**Note**: The pipe character `|` is used to combine multiple roles or permissions in the `args` parameter. example "role:admin|permission:Read" or multiple combine "role:admin,product|permission:Read"
+
+#### Get item
 
 ## Functions list
 
@@ -58,6 +68,10 @@ func AssignPermissionToRole(ctx context.Context, role string, permissions []stri
 ```
 create new role example `Product.create` | `Product.update` | `Product.delete`
 
+### func 
+```go
+func ValidateControl(ctx context.Context, args string) (bool, error)
+```
 <br/>
 
 # Contact
