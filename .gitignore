@@ -1,2 +1,3 @@
 example/go.mod
 example/go.sum
+example/*.go
