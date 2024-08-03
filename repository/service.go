@@ -3,8 +3,16 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
+)
+
+var (
+	ErrDuplicateRole       = errors.New("duplicate role")
+	ErrDuplicatePermission = errors.New("duplicate permission")
+	ErrRoleNotFound        = errors.New("role not found")
+	ErrPermissionNotFound  = errors.New("permission not found")
 )
 
 type SQL struct {
@@ -28,6 +36,9 @@ func (sql *SQL) CreateRole(ctx context.Context, name string) error {
 
 	_, err := sql.db.ExecContext(ctx, query, name)
 	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return ErrDuplicateRole
+		}
 		return fmt.Errorf("failed to create role with name %s: %w", name, err)
 	}
 	return nil
@@ -46,6 +57,9 @@ func (sql *SQL) CreatePermission(ctx context.Context, name string) error {
 
 	_, err := sql.db.ExecContext(ctx, query, name)
 	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return ErrDuplicatePermission
+		}
 		return fmt.Errorf("failed to create permission with name %s: %w", name, err)
 	}
 	return nil
@@ -129,6 +143,10 @@ func (sql *SQL) GetRoleIDByName(ctx context.Context, roles []string) ([]uint, er
 		return nil, fmt.Errorf("error iterating through rows: %w", err)
 	}
 
+	if len(roleIDs) == 0 {
+		return nil, ErrRoleNotFound
+	}
+
 	return roleIDs, nil
 }
 
@@ -173,6 +191,10 @@ func (sql *SQL) GetPermissionIDByName(ctx context.Context, permissions []string)
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating through rows: %w", err)
+	}
+
+	if len(permissionIDs) == 0 {
+		return nil, ErrPermissionNotFound
 	}
 
 	return permissionIDs, nil

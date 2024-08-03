@@ -4,16 +4,15 @@ import (
 	"context"
 )
 
-// SetRole sets a new role in the system.
+// AddRole sets a new role in the system.
 //
 // Parameters:
 // - ctx: The context.Context object for the request.
 // - name: The name of the role to be created.
-// Example:
-// service.SetRole(ctx, "admin")
+//
 // Returns:
 // - error: An error if the role creation fails, otherwise nil.
-func (s *Service) SetRole(ctx context.Context, name string) error {
+func (s *Service) AddRole(ctx context.Context, name string) error {
 	err := s.repo.CreateRole(ctx, name)
 	if err != nil {
 		return err
@@ -21,16 +20,15 @@ func (s *Service) SetRole(ctx context.Context, name string) error {
 	return nil
 }
 
-// SetPermission sets a new permission in the system.
+// AddPermission sets a new permission in the system.
 //
 // Parameters:
 // - ctx: The context.Context object for the request.
 // - name: The name of the permission to be created.
-// Example:
 //
 // Returns:
 // - error: An error if the permission creation fails, otherwise nil.
-func (s *Service) SetPermission(ctx context.Context, name string) error {
+func (s *Service) AddPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
 		return err
@@ -45,8 +43,6 @@ func (s *Service) SetPermission(ctx context.Context, name string) error {
 // - role: The name of the role to which the permissions will be assigned.
 // - permissions: A slice of strings representing the names of the permissions to be assigned.
 //
-// Example:
-// service.AssignPermissionToRole(ctx, "admin", []string{"read", "write"})
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
 func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {

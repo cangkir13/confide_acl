@@ -24,7 +24,7 @@ func TestCreateRole(t *testing.T) {
 		WithArgs("admin").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = service.SetRole(context.Background(), "admin")
+	err = service.AddRole(context.Background(), "admin")
 	require.NoError(t, err)
 	err = mock.ExpectationsWereMet()
 	require.NoError(t, err)
@@ -43,7 +43,7 @@ func TestCreatePermission(t *testing.T) {
 		WithArgs("read").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = service.SetPermission(context.Background(), "read")
+	err = service.AddPermission(context.Background(), "read")
 	require.NoError(t, err)
 	err = mock.ExpectationsWereMet()
 	require.NoError(t, err)
