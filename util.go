@@ -2,7 +2,6 @@ package confide_acl
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -11,6 +10,12 @@ type RolePermission struct {
 	Roles       []string
 	Permissions []string
 }
+
+var (
+	ErrUnknownKey           = errors.New("unknown key, valid keys: role, permission")
+	ErrInvalidConsumerFomat = errors.New("invalid consumer username format, example: consumer:1")
+	ErrInvalidParseFormat   = errors.New("invalid format")
+)
 
 // parseRolePermission parses the input string and returns a RolePermission struct and an error.
 //
@@ -35,7 +40,7 @@ func parseRolePermission(input string) (RolePermission, error) {
 		// Split each part by ":"
 		keyValue := strings.Split(part, ":")
 		if len(keyValue) != 2 {
-			return rp, fmt.Errorf("invalid format: %s", part)
+			return rp, ErrInvalidParseFormat
 		}
 
 		key, value := keyValue[0], keyValue[1]
@@ -45,7 +50,7 @@ func parseRolePermission(input string) (RolePermission, error) {
 		case "permission":
 			rp.Permissions = strings.Split(value, ",")
 		default:
-			return rp, fmt.Errorf("unknown key: %s", key)
+			return rp, ErrUnknownKey
 		}
 	}
 
@@ -63,7 +68,7 @@ func parseRolePermission(input string) (RolePermission, error) {
 func extractConsumerID(headerValue string) (int, error) {
 	parts := strings.Split(headerValue, ":")
 	if len(parts) != 2 {
-		return 0, errors.New("invalid consumer username format")
+		return 0, ErrInvalidConsumerFomat
 	}
 
 	return strconv.Atoi(parts[1])

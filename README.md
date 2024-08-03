@@ -1,4 +1,7 @@
-# Overview 
+[![Go Reference](https://pkg.go.dev/badge/github.com/cangkir13/confide_acl.svg)](https://pkg.go.dev/github.com/cangkir13/confide_acl)
+[![CodeQL](https://github.com/cangkir13/confide_acl/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/cangkir13/confide_acl/actions/workflows/github-code-scanning/codeql)
+[![Build](https://github.com/cangkir13/confide_acl/actions/workflows/go.yml/badge.svg)](https://github.com/cangkir13/confide_acl/actions/workflows/go.yml)
+
 
 The `confide_acl` package is a Go library designed for managing roles and permissions in an application. This package provides functionalities to create roles and permissions, as well as assign permissions to roles.
 
@@ -10,12 +13,13 @@ The `confide_acl` package is a Go library designed for managing roles and permis
 ```sh
 go get github.com/cangkir13/confide_acl
 ```
-2. migration sql needed. you can download file below and migration manually on your DATABASE
+2. migration sql needed. you can download file below and import sql file manually to your Database
 ```sh
 https://github.com/cangkir13/confide_acl/blob/main/migrations/20240801_initial.sql
 ```
 
 ## Usage
+This is sample usage
 
 ```go
 func main() {
@@ -50,17 +54,17 @@ func main() {
 
 ## Functions list
 
-### func SetRole
+### func AddRole
 ```go
-func SetRole(ctx context.Context, name string) error
+func AddRole(ctx context.Context, name string) error
 ```
 create new role example `Admin` or others for user role name
 
-### func SetPermission
+### func AddPermission
 ```go
-func SetPermission(ctx context.Context, name string) error
+func AddPermission(ctx context.Context, name string) error
 ```
-create new permission example `Product.create` | `Product.update` | `Product.delete`
+create new permission example `Product.create` | `Product-create` | `Product-create`
 
 ### func AssignPermissionToRole
 ```go

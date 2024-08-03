@@ -20,8 +20,8 @@ func NewService(db *sql.DB) *Service {
 }
 
 type ConfideACL interface {
-	SetRole(ctx context.Context, name string) error
-	SetPermission(ctx context.Context, name string) error
+	AddRole(ctx context.Context, name string) error
+	AddPermission(ctx context.Context, name string) error
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
 	ValidateControl(ctx context.Context, args string) (bool, error)
 }
