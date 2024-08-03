@@ -9,13 +9,29 @@ import (
 	"github.com/eben-hk/confide"
 )
 
+// table default if not set
+var defaultTable string = "users"
+
 type Service struct {
-	repo *repository.SQL
+	repo                *repository.SQL
+	tableAccountDefault *string
 }
 
-func NewService(db *sql.DB) *Service {
+// NewService creates a new instance of the Service struct.
+//
+// Parameters:
+// - db: a pointer to a sql.DB object representing the database connection.
+// - tableAccountDefault: a string representing the default table for account or user tables.
+//
+// Returns:
+// - a pointer to the Service struct.
+func NewService(db *sql.DB, tableAccountDefault string) *Service {
+	if tableAccountDefault == "" {
+		tableAccountDefault = defaultTable
+	}
 	return &Service{
-		repo: repository.NewSQL(db),
+		repo:                repository.NewSQL(db, &tableAccountDefault),
+		tableAccountDefault: &tableAccountDefault,
 	}
 }
 
@@ -23,6 +39,7 @@ type ConfideACL interface {
 	AddRole(ctx context.Context, name string) error
 	AddPermission(ctx context.Context, name string) error
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
+	AssignUserToRole(ctx context.Context, userid uint, role string) error
 	ValidateControl(ctx context.Context, args string) (bool, error)
 }
 

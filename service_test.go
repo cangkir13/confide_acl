@@ -6,18 +6,18 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/cangkir13/confide_acl/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var tableuser string = "users"
 
 func TestCreateRole(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
 
-	_ = repository.NewSQL(db)
-	service := NewService(db)
+	service := NewService(db, tableuser)
 
 	// Periksa format dan ekspektasi query
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO roles (name) VALUES (?)")).
@@ -35,8 +35,7 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	_ = repository.NewSQL(db)
-	service := NewService(db)
+	service := NewService(db, tableuser)
 
 	// Periksa format dan ekspektasi query
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO permissions (name) VALUES (?)")).
@@ -54,7 +53,7 @@ func TestAssignPermissionToRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, tableuser)
 
 	// Define test values
 	roleName := "admin"
@@ -111,7 +110,7 @@ func TestValidateControl(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, tableuser)
 
 	tests := []struct {
 		name           string
@@ -227,6 +226,97 @@ func TestValidateControl(t *testing.T) {
 			}
 			if result != tt.expectedResult {
 				t.Errorf("expected result: %v, got: %v", tt.expectedResult, result)
+			}
+
+			// Ensure all expectations were met
+			err = mock.ExpectationsWereMet()
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestAssignUserToRole(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	tableName := "user_has_roles"
+	svc := NewService(db, tableName)
+
+	tests := []struct {
+		name          string
+		roleName      string
+		mockRoleIDs   []uint
+		expectedError bool
+		mockFunc      func()
+	}{
+		{
+			name:        "Successful assignment",
+			roleName:    "Admin",
+			mockRoleIDs: []uint{1},
+			mockFunc: func() {
+				// Mock query to get role IDs
+				roleRows := sqlmock.NewRows([]string{"id"})
+				for _, id := range []uint{1} {
+					roleRows.AddRow(id)
+				}
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM roles WHERE name IN (?)")).
+					WithArgs("Admin").
+					WillReturnRows(roleRows)
+
+				// Mock query to assign role to user
+				mock.ExpectExec(regexp.QuoteMeta("INSERT INTO user_has_roles (user_id, role_id) VALUES (?, ?)")).
+					WithArgs(123, 1).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
+			expectedError: false,
+		},
+		{
+			name:     "Error getting role ID",
+			roleName: "Admin",
+			mockFunc: func() {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM roles WHERE name IN (?)")).
+					WithArgs("Admin").
+					WillReturnError(assert.AnError)
+			},
+			expectedError: true,
+		},
+		{
+			name:        "Error assigning role to user",
+			roleName:    "Admin",
+			mockRoleIDs: []uint{1},
+			mockFunc: func() {
+				// Mock query to get role IDs
+				roleRows := sqlmock.NewRows([]string{"id"})
+				for _, id := range []uint{1} {
+					roleRows.AddRow(id)
+				}
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM roles WHERE name IN (?)")).
+					WithArgs("Admin").
+					WillReturnRows(roleRows)
+
+				// Mock query to assign role to user
+				mock.ExpectExec(regexp.QuoteMeta("INSERT INTO user_has_roles (user_id, role_id) VALUES (?, ?)")).
+					WithArgs(123, 1).
+					WillReturnError(assert.AnError)
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up mock expectations using mockFunc
+			if tt.mockFunc != nil {
+				tt.mockFunc()
+			}
+
+			// Call the service method
+			err := svc.AssignUserToRole(context.Background(), 123, tt.roleName)
+
+			// Assertions
+			if (err != nil) != tt.expectedError {
+				t.Errorf("expected error: %v, got: %v", tt.expectedError, err)
 			}
 
 			// Ensure all expectations were met

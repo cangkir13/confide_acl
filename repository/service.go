@@ -9,18 +9,20 @@ import (
 )
 
 var (
-	ErrDuplicateRole       = errors.New("duplicate role")
 	ErrDuplicatePermission = errors.New("duplicate permission")
+	ErrDuplicateRole       = errors.New("duplicate role")
+	ErrDuplicateUserRole   = errors.New("duplicate user role")
 	ErrRoleNotFound        = errors.New("role not found")
 	ErrPermissionNotFound  = errors.New("permission not found")
 )
 
 type SQL struct {
-	db *sql.DB
+	db                  *sql.DB
+	tableAccountDefault *string
 }
 
-func NewSQL(db *sql.DB) *SQL {
-	return &SQL{db: db}
+func NewSQL(db *sql.DB, tableAccountDefault *string) *SQL {
+	return &SQL{db: db, tableAccountDefault: tableAccountDefault}
 }
 
 // CreateRole inserts a new role into the database with the given name.
@@ -97,6 +99,29 @@ func (sql *SQL) GivePermissionToRole(ctx context.Context, roleID uint, permissio
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	return nil
+}
+
+// GiveRoleToUser assigns a role to a user in the database.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userID: The ID of the user to whom the role will be assigned.
+// - role: The ID of the role to be assigned to the user.
+//
+// Returns:
+// - error: An error if the assignment fails, otherwise nil.
+func (sql *SQL) GiveRoleToUser(ctx context.Context, userID uint, role uint) error {
+	query := "INSERT INTO " + *sql.tableAccountDefault + " (user_id, role_id) VALUES (?, ?)"
+	fmt.Println(query)
+
+	_, err := sql.db.ExecContext(ctx, query, userID, role)
+	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return ErrDuplicateUserRole
+		}
+		return fmt.Errorf("failed to assign role %d to user %d: %w", role, userID, err)
+	}
 	return nil
 }
 

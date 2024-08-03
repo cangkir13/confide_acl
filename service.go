@@ -66,6 +66,30 @@ func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permi
 	return nil
 }
 
+// AssignUserToRole assigns a user to a role in the system.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user to be assigned to the role.
+// - role: The name of the role to which the user will be assigned.
+//
+// Returns:
+// - error: An error if the assignment fails, otherwise nil.
+func (s *Service) AssignUserToRole(ctx context.Context, userid uint, role string) error {
+	// get role id by string
+	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
+	if err != nil {
+		return err
+	}
+
+	// assign permission to role
+	err = s.repo.GiveRoleToUser(ctx, userid, roleIDs[0])
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // ValidateControl validates the control by parsing the role or permission string,
 // retrieving the corresponding role and permission IDs from the repository,
 // and checking if the user has access to the specified role and permission.

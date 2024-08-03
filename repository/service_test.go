@@ -9,6 +9,8 @@ import (
 	"github.com/cangkir13/confide_acl/repository"
 )
 
+var tableuser string = "users"
+
 func TestCreateRole(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -16,7 +18,7 @@ func TestCreateRole(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db)
+	repo := repository.NewSQL(db, &tableuser)
 	ctx := context.Background()
 	roleName := "admin"
 
@@ -40,7 +42,7 @@ func TestCreatePermission(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db)
+	repo := repository.NewSQL(db, &tableuser)
 	ctx := context.Background()
 	permissionName := "edit"
 
@@ -64,7 +66,7 @@ func TestGivePermissionToRole(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db)
+	repo := repository.NewSQL(db, &tableuser)
 	ctx := context.Background()
 	roleID := uint(1)
 	permissions := []uint{1, 2, 3}
@@ -86,6 +88,33 @@ func TestGivePermissionToRole(t *testing.T) {
 	}
 }
 
+func TestGiveRoleToUser(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	tablename := "custom_table"
+	repo := repository.NewSQL(db, &tablename)
+	ctx := context.Background()
+	userID := uint(1)
+	roleID := uint(2)
+
+	// Test case: Successful role assignment with a custom table name
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO "+tablename+" (user_id, role_id) VALUES (?, ?)")).
+		WithArgs(userID, roleID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	if err := repo.GiveRoleToUser(ctx, userID, roleID); err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
 func TestGetRoleIDByName(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -93,7 +122,7 @@ func TestGetRoleIDByName(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db)
+	repo := repository.NewSQL(db, &tableuser)
 	ctx := context.Background()
 	roleNames := []string{"admin", "user"}
 	expectedRoleIDs := []uint{1, 2}
@@ -130,7 +159,7 @@ func TestGetPermissionIDByName(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db)
+	repo := repository.NewSQL(db, &tableuser)
 	ctx := context.Background()
 	permissionNames := []string{"edit", "delete"}
 	expectedPermissionIDs := []uint{1, 2}
@@ -207,7 +236,7 @@ func TestCheckRolePermission(t *testing.T) {
 
 			tt.setupMocks(mock)
 
-			sqlInstance := repository.NewSQL(db)
+			sqlInstance := repository.NewSQL(db, &tableuser)
 
 			ctx := context.Background()
 			result, err := sqlInstance.CheckRolePermission(ctx, tt.roleID, tt.permissionID)
