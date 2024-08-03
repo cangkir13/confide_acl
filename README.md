@@ -35,8 +35,6 @@ func main() {
 }
 ```
 
-# Example
-
 # Contact
 
 For any inquiries or support, please contact cangkir13@gmail.com.
