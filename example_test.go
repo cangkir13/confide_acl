@@ -44,6 +44,7 @@ func ExampleAddRole() {
 		log.Fatalf("failed to create role: %v", err)
 	}
 
+	// output nil if success
 }
 
 // ExampleAddPermission generates a permission and stores it using the provided service.
@@ -58,6 +59,8 @@ func ExampleAddPermission() {
 	if err != nil {
 		log.Fatalf("failed to create permission: %v", err)
 	}
+
+	// output nil if success
 }
 
 // ExampleAssignPermissionToRole assigns a permission to a role using the provided service.
@@ -72,6 +75,8 @@ func ExampleAssignPermissionToRole() {
 	if err != nil {
 		log.Fatalf("failed to assign permission to role: %v", err)
 	}
+
+	// output nil if success
 }
 
 // Example Middleware AuthACL
@@ -81,7 +86,9 @@ func ExampleMiddlewareACL() {
 
 	server := http.NewServeMux()
 	server.HandleFunc("/", confideacl.AuthACL(service, "role:Admin|permission:Read"), HomeHandler)
+	// or
 	server.HandleFunc("/", confideacl.AuthACL(service, "role:Admin"), HomeHandler)
 
+	// output next to HomeHandler
 	http.ListenAndServe(":8080", server)
 }
