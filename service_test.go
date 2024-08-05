@@ -17,7 +17,11 @@ func TestCreateRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	service := NewService(db, tableuser)
+	conf := ConfigACL{
+		Database:     db,
+		TableAccount: "test",
+	}
+	service := NewService(conf)
 
 	// Periksa format dan ekspektasi query
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO roles (name) VALUES (?)")).
@@ -35,7 +39,11 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	service := NewService(db, tableuser)
+	conf := ConfigACL{
+		Database:     db,
+		TableAccount: "test",
+	}
+	service := NewService(conf)
 
 	// Periksa format dan ekspektasi query
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO permissions (name) VALUES (?)")).
@@ -53,7 +61,11 @@ func TestAssignPermissionToRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	service := NewService(db, tableuser)
+	conf := ConfigACL{
+		Database:     db,
+		TableAccount: "test",
+	}
+	service := NewService(conf)
 
 	// Define test values
 	roleName := "admin"
@@ -110,7 +122,11 @@ func TestValidateControl(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	service := NewService(db, tableuser)
+	conf := ConfigACL{
+		Database:     db,
+		TableAccount: "test",
+	}
+	service := NewService(conf)
 
 	tests := []struct {
 		name           string
@@ -240,8 +256,11 @@ func TestAssignUserToRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	tableName := "user_has_roles"
-	svc := NewService(db, tableName)
+	conf := ConfigACL{
+		Database:     db,
+		TableAccount: "users",
+	}
+	svc := NewService(conf)
 
 	tests := []struct {
 		name          string

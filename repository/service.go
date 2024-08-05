@@ -18,11 +18,11 @@ var (
 
 type SQL struct {
 	db                  *sql.DB
-	tableAccountDefault *string
+	tableAccountDefault string
 }
 
-func NewSQL(db *sql.DB, tableAccountDefault *string) *SQL {
-	return &SQL{db: db, tableAccountDefault: tableAccountDefault}
+func NewSQL(db *sql.DB, tableAccountDefault string) SQL {
+	return SQL{db: db, tableAccountDefault: tableAccountDefault}
 }
 
 // CreateRole inserts a new role into the database with the given name.
@@ -112,8 +112,7 @@ func (sql *SQL) GivePermissionToRole(ctx context.Context, roleID uint, permissio
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
 func (sql *SQL) GiveRoleToUser(ctx context.Context, userID uint, role uint) error {
-	query := "INSERT INTO " + *sql.tableAccountDefault + " (user_id, role_id) VALUES (?, ?)"
-	fmt.Println(query)
+	query := "INSERT INTO user_has_roles (user_id, role_id) VALUES (?, ?)"
 
 	_, err := sql.db.ExecContext(ctx, query, userID, role)
 	if err != nil {

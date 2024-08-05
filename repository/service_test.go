@@ -18,7 +18,7 @@ func TestCreateRole(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db, &tableuser)
+	repo := repository.NewSQL(db, tableuser)
 	ctx := context.Background()
 	roleName := "admin"
 
@@ -42,7 +42,7 @@ func TestCreatePermission(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db, &tableuser)
+	repo := repository.NewSQL(db, tableuser)
 	ctx := context.Background()
 	permissionName := "edit"
 
@@ -66,7 +66,7 @@ func TestGivePermissionToRole(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db, &tableuser)
+	repo := repository.NewSQL(db, tableuser)
 	ctx := context.Background()
 	roleID := uint(1)
 	permissions := []uint{1, 2, 3}
@@ -96,7 +96,7 @@ func TestGiveRoleToUser(t *testing.T) {
 	defer db.Close()
 
 	tablename := "custom_table"
-	repo := repository.NewSQL(db, &tablename)
+	repo := repository.NewSQL(db, tablename)
 	ctx := context.Background()
 	userID := uint(1)
 	roleID := uint(2)
@@ -122,7 +122,7 @@ func TestGetRoleIDByName(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db, &tableuser)
+	repo := repository.NewSQL(db, tableuser)
 	ctx := context.Background()
 	roleNames := []string{"admin", "user"}
 	expectedRoleIDs := []uint{1, 2}
@@ -159,7 +159,7 @@ func TestGetPermissionIDByName(t *testing.T) {
 	}
 	defer db.Close()
 
-	repo := repository.NewSQL(db, &tableuser)
+	repo := repository.NewSQL(db, tableuser)
 	ctx := context.Background()
 	permissionNames := []string{"edit", "delete"}
 	expectedPermissionIDs := []uint{1, 2}
@@ -236,7 +236,7 @@ func TestCheckRolePermission(t *testing.T) {
 
 			tt.setupMocks(mock)
 
-			sqlInstance := repository.NewSQL(db, &tableuser)
+			sqlInstance := repository.NewSQL(db, tableuser)
 
 			ctx := context.Background()
 			result, err := sqlInstance.CheckRolePermission(ctx, tt.roleID, tt.permissionID)

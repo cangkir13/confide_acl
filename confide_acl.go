@@ -12,27 +12,10 @@ import (
 // table default if not set
 var defaultTable string = "users"
 
-type Service struct {
-	repo                *repository.SQL
-	tableAccountDefault *string
-}
-
-// NewService creates a new instance of the Service struct.
-//
-// Parameters:
-// - db: a pointer to a sql.DB object representing the database connection.
-// - tableAccountDefault: a string representing the default table for account or user tables.
-//
-// Returns:
-// - a pointer to the Service struct.
-func NewService(db *sql.DB, tableAccountDefault string) *Service {
-	if tableAccountDefault == "" {
-		tableAccountDefault = defaultTable
-	}
-	return &Service{
-		repo:                repository.NewSQL(db, &tableAccountDefault),
-		tableAccountDefault: &tableAccountDefault,
-	}
+// config acl service struct
+type ConfigACL struct {
+	Database     *sql.DB
+	TableAccount string
 }
 
 type ConfideACL interface {
@@ -41,6 +24,26 @@ type ConfideACL interface {
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
 	AssignUserToRole(ctx context.Context, userid uint, role string) error
 	ValidateControl(ctx context.Context, args string) (bool, error)
+}
+
+type service struct {
+	repo repository.SQL
+}
+
+// NewService creates a new instance of the Service struct.
+//
+// Parameters:
+// - conf: ConfigACL struct containing the database connection and default table account.
+//
+// Returns:
+// - a pointer to the Service struct.
+func NewService(conf ConfigACL) service {
+	if conf.TableAccount == "" {
+		conf.TableAccount = defaultTable
+	}
+	return service{
+		repo: repository.NewSQL(conf.Database, conf.TableAccount),
+	}
 }
 
 // AuthACL is a middleware function that checks the user's permission before
@@ -54,7 +57,7 @@ type ConfideACL interface {
 // validating the control, it returns a BadRequest error. If the user does not
 // have the required permission, it returns an Unauthorized error. Otherwise,
 // it calls the next handler.
-func AuthACL(s *Service, args string) func(next http.Handler) http.Handler {
+func AuthACL(s *service, args string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// get username id from header

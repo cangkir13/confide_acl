@@ -12,7 +12,7 @@ import (
 //
 // Returns:
 // - error: An error if the role creation fails, otherwise nil.
-func (s *Service) AddRole(ctx context.Context, name string) error {
+func (s *service) AddRole(ctx context.Context, name string) error {
 	err := s.repo.CreateRole(ctx, name)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func (s *Service) AddRole(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the permission creation fails, otherwise nil.
-func (s *Service) AddPermission(ctx context.Context, name string) error {
+func (s *service) AddPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (s *Service) AddPermission(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
-func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
+func (s *service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
 	// get role id by string
 	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
 	if err != nil {
@@ -75,7 +75,7 @@ func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permi
 //
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
-func (s *Service) AssignUserToRole(ctx context.Context, userid uint, role string) error {
+func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string) error {
 	// get role id by string
 	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
 	if err != nil {
@@ -100,7 +100,7 @@ func (s *Service) AssignUserToRole(ctx context.Context, userid uint, role string
 // or multiple flag "role:Admin|permission:mybo.create,mybo.read"
 // Returns a boolean indicating whether the user has access to the specified role and permission,
 // and an error if any occurred during the validation process.
-func (s *Service) ValidateControl(ctx context.Context, args string) (bool, error) {
+func (s *service) ValidateControl(ctx context.Context, args string) (bool, error) {
 	// parsing string role or permission
 	rp, err := parseRolePermission(args)
 

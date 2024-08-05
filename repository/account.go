@@ -15,8 +15,8 @@ type Account struct {
 // Returns:
 // - string: the name of the table.
 func (a *Account) TableName() string {
-	if a.SQL.tableAccountDefault != nil {
-		return *a.SQL.tableAccountDefault
+	if a.SQL.tableAccountDefault != "" {
+		return a.SQL.tableAccountDefault
 	}
 	return "users"
 }
