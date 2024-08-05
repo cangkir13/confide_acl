@@ -1,8 +1,6 @@
 package confide_acl
 
-import (
-	"context"
-)
+import "context"
 
 // AddRole sets a new role in the system.
 //
@@ -12,7 +10,7 @@ import (
 //
 // Returns:
 // - error: An error if the role creation fails, otherwise nil.
-func (s *Service) AddRole(ctx context.Context, name string) error {
+func (s *service) AddRole(ctx context.Context, name string) error {
 	err := s.repo.CreateRole(ctx, name)
 	if err != nil {
 		return err
@@ -28,7 +26,7 @@ func (s *Service) AddRole(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the permission creation fails, otherwise nil.
-func (s *Service) AddPermission(ctx context.Context, name string) error {
+func (s *service) AddPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
 		return err
@@ -45,7 +43,7 @@ func (s *Service) AddPermission(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
-func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
+func (s *service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
 	// get role id by string
 	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
 	if err != nil {
@@ -66,50 +64,89 @@ func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permi
 	return nil
 }
 
-// ValidateControl validates the control by parsing the role or permission string,
-// retrieving the corresponding role and permission IDs from the repository,
-// and checking if the user has access to the specified role and permission.
-// ctx: the context.Context object for handling cancellation and timeouts.
-// args: the string representation of the role or permission.
-// example: "role:Admin" or "permission:mybo.create"
-// or combined "role:Admin|permission:mybo.create"
-// or multiple flag "role:Admin|permission:mybo.create,mybo.read"
-// Returns a boolean indicating whether the user has access to the specified role and permission,
-// and an error if any occurred during the validation process.
-func (s *Service) ValidateControl(ctx context.Context, args string) (bool, error) {
-	// parsing string role or permission
-	rp, err := parseRolePermission(args)
-
+// AssignUserToRole assigns a user to a role in the system.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user to be assigned to the role.
+// - role: The name of the role to which the user will be assigned.
+//
+// Returns:
+// - error: An error if the assignment fails, otherwise nil.
+func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string) error {
+	// get role id by string
+	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	var (
-		roleid []uint
-		permid []uint
-	)
+	// assign permission to role
+	err = s.repo.GiveRoleToUser(ctx, userid, roleIDs[0])
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-	// get role id by string
+// VerifyPrivilege verifies if a user has the required role and permission to access a resource.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user.
+// - rp: The RolePermission object containing the roles and permissions to be verified.
+//
+// Returns:
+// - bool: True if the user has the required role and permission, false otherwise.
+// - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
+func (s *service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
+	var roleaccess, permissionaccess bool = false, false
+	var errump []error
+
+	// Get role IDs by name
 	if len(rp.Roles) > 0 {
 		roleIds, err := s.repo.GetRoleIDByName(ctx, rp.Roles)
 		if err != nil {
 			return false, err
 		}
-		roleid = roleIds
-	}
 
+		if len(roleIds) > 0 {
+			hasRoles, err := s.repo.GetAccountRole(ctx, uint(userid), roleIds)
+			if err != nil {
+				roleaccess = false
+				errump = append(errump, err)
+			}
+
+			if len(hasRoles) > 0 {
+				roleaccess = true
+			}
+		}
+	}
+	// Get permission IDs by name
 	if len(rp.Permissions) > 0 {
 		permissionIds, err := s.repo.GetPermissionIDByName(ctx, rp.Permissions)
 		if err != nil {
 			return false, err
 		}
-		permid = permissionIds
+		if len(permissionIds) > 0 {
+			hasPermissions, err := s.repo.GetAccountPermission(ctx, uint(userid), permissionIds)
+			if err != nil {
+				permissionaccess = false
+				errump = append(errump, err)
+			}
+			if len(hasPermissions) > 0 {
+				permissionaccess = true
+			}
+		}
 	}
 
-	hasaccess, err := s.repo.CheckRolePermission(ctx, roleid, permid)
-	if err != nil {
-		return false, err
+	if len(errump) > 0 {
+		return false, errump[0]
 	}
 
-	return hasaccess, nil
+	if !roleaccess && !permissionaccess {
+		return false, nil
+	}
+
+	// hasaccess
+	return true, nil
 }

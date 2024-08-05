@@ -24,11 +24,14 @@ This is sample usage
 ```go
 func main() {
 
+	// setting table user default 
+	// the default table account is users
+	defautltUser := "admin"
 	// inject db connection
-	confideAcl := confide_acl.NewService(db)
+	confideAcl := confide_acl.NewService(db, defautltUser)
 
 	// Create a role
-	err := confideAcl.CreateRole(context.Background(), "admin")
+	err := confideAcl.AddRole(context.Background(), "admin")
 	if err != nil {
 		fmt.Println(err)
 	}
