@@ -7,16 +7,7 @@ import (
 )
 
 // AuthACL is a middleware function that checks the user's permission before
-// allowing them to access the next handler. It takes a Service pointer and a
-// string argument, and returns a function that takes a http.Handler and
-// returns a http.Handler.
-//
-// The returned function is an http.HandlerFunc that checks the user's
-// permission by calling the ValidateControl method of the Service with the
-// request's context and the provided argument. If there is an error in
-// validating the control, it returns a BadRequest error. If the user does not
-// have the required permission, it returns an Unauthorized error. Otherwise,
-// it calls the next handler.
+// passing the request to the next handler.
 // Parameters:
 // - s: A pointer to the Service struct.
 // - args: A string representing the role or permission to check. exmple: role:admin or permission:read
