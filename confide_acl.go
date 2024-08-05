@@ -32,7 +32,7 @@ type ConfideACL interface {
 	AddPermission(ctx context.Context, name string) error
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
 	AssignUserToRole(ctx context.Context, userid uint, role string) error
-	ACLValidate(ctx context.Context, userid int, rp RolePermission) (bool, error)
+	VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error)
 }
 
 type service struct {

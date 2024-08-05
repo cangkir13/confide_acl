@@ -2,69 +2,6 @@ package confide_acl
 
 import "context"
 
-// VerifyPrivilege verifies if a user has the required role and permission to access a resource.
-//
-// Parameters:
-// - ctx: The context.Context object for the request.
-// - userid: The ID of the user.
-// - rp: The RolePermission object containing the roles and permissions to be verified.
-//
-// Returns:
-// - bool: True if the user has the required role and permission, false otherwise.
-// - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
-func (s *service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
-	var roleaccess, permissionaccess bool = false, false
-	var errump []error
-
-	// Get role IDs by name
-	if len(rp.Roles) > 0 {
-		roleIds, err := s.repo.GetRoleIDByName(ctx, rp.Roles)
-		if err != nil {
-			return false, err
-		}
-
-		if len(roleIds) > 0 {
-			hasRoles, err := s.repo.GetAccountRole(ctx, uint(userid), roleIds)
-			if err != nil {
-				roleaccess = false
-				errump = append(errump, err)
-			}
-
-			if len(hasRoles) > 0 {
-				roleaccess = true
-			}
-		}
-	}
-	// Get permission IDs by name
-	if len(rp.Permissions) > 0 {
-		permissionIds, err := s.repo.GetPermissionIDByName(ctx, rp.Permissions)
-		if err != nil {
-			return false, err
-		}
-		if len(permissionIds) > 0 {
-			hasPermissions, err := s.repo.GetAccountPermission(ctx, uint(userid), permissionIds)
-			if err != nil {
-				permissionaccess = false
-				errump = append(errump, err)
-			}
-			if len(hasPermissions) > 0 {
-				permissionaccess = true
-			}
-		}
-	}
-
-	if len(errump) > 0 {
-		return false, errump[0]
-	}
-
-	if !roleaccess && !permissionaccess {
-		return false, nil
-	}
-
-	// hasaccess
-	return true, nil
-}
-
 // AddRole sets a new role in the system.
 //
 // Parameters:
@@ -149,4 +86,67 @@ func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string
 		return err
 	}
 	return nil
+}
+
+// VerifyPrivilege verifies if a user has the required role and permission to access a resource.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user.
+// - rp: The RolePermission object containing the roles and permissions to be verified.
+//
+// Returns:
+// - bool: True if the user has the required role and permission, false otherwise.
+// - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
+func (s *service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
+	var roleaccess, permissionaccess bool = false, false
+	var errump []error
+
+	// Get role IDs by name
+	if len(rp.Roles) > 0 {
+		roleIds, err := s.repo.GetRoleIDByName(ctx, rp.Roles)
+		if err != nil {
+			return false, err
+		}
+
+		if len(roleIds) > 0 {
+			hasRoles, err := s.repo.GetAccountRole(ctx, uint(userid), roleIds)
+			if err != nil {
+				roleaccess = false
+				errump = append(errump, err)
+			}
+
+			if len(hasRoles) > 0 {
+				roleaccess = true
+			}
+		}
+	}
+	// Get permission IDs by name
+	if len(rp.Permissions) > 0 {
+		permissionIds, err := s.repo.GetPermissionIDByName(ctx, rp.Permissions)
+		if err != nil {
+			return false, err
+		}
+		if len(permissionIds) > 0 {
+			hasPermissions, err := s.repo.GetAccountPermission(ctx, uint(userid), permissionIds)
+			if err != nil {
+				permissionaccess = false
+				errump = append(errump, err)
+			}
+			if len(hasPermissions) > 0 {
+				permissionaccess = true
+			}
+		}
+	}
+
+	if len(errump) > 0 {
+		return false, errump[0]
+	}
+
+	if !roleaccess && !permissionaccess {
+		return false, nil
+	}
+
+	// hasaccess
+	return true, nil
 }

@@ -17,6 +17,12 @@ import (
 // validating the control, it returns a BadRequest error. If the user does not
 // have the required permission, it returns an Unauthorized error. Otherwise,
 // it calls the next handler.
+// Parameters:
+// - s: A pointer to the Service struct.
+// - args: A string representing the role or permission to check. exmple: role:admin or permission:read
+// - args: other sample "role:admin|permission:read" or "permission:read,write" or combined both "role:admin|permission:read,write"
+// Returns:
+// - A function that takes a http.Handler and returns a http.Handler.
 func AuthACL(s *service, args string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
