@@ -39,7 +39,6 @@ type ConfideACL interface {
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
 	AssignUserToRole(ctx context.Context, userid uint, role string) error
 	PolicyACL(ctx context.Context, userid int, args string) (bool, error)
-	VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error)
 }
 
 type service struct {

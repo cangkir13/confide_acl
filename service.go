@@ -119,7 +119,7 @@ func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool,
 	}
 
 	// verify privilege
-	verified, err := s.VerifyPrivilege(ctx, userid, parsing)
+	verified, err := s.verifyPrivilege(ctx, userid, parsing)
 	if err != nil {
 		return false, err
 	}
@@ -127,7 +127,7 @@ func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool,
 	return verified, nil
 }
 
-// VerifyPrivilege verifies if a user has the required role and permission to access a resource.
+// verifyPrivilege verifies if a user has the required role and permission to access a resource.
 //
 // Parameters:
 // - ctx: The context.Context object for the request.
@@ -137,7 +137,7 @@ func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool,
 // Returns:
 // - bool: True if the user has the required role and permission, false otherwise.
 // - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
-func (s *service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
+func (s *service) verifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
 	var roleaccess, permissionaccess bool = false, false
 	var errump []error
 
