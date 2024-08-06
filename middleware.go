@@ -14,7 +14,7 @@ import (
 // - args: other sample "role:admin|permission:read" or "permission:read,write" or combined both "role:admin|permission:read,write"
 // Returns:
 // - A function that takes a http.Handler and returns a http.Handler.
-func AuthACL(s *service, args string) func(next http.Handler) http.Handler {
+func AuthACL(s service, args string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// get username id from header
