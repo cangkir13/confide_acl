@@ -1,3 +1,8 @@
+// Copyright 2024 Cangkir14. All rights reserved.
+// Use of this source code is governed by a MIT
+// license that can be found in the LICENSE file.
+// https://github.com/cangkir13/confide_acl
+// confide_acl library is for managing roles and permissions in an application.
 package confide_acl
 
 import (
@@ -7,13 +12,13 @@ import (
 	"github.com/cangkir13/confide_acl/repository"
 )
 
-// table default if not set
+// #Table default table for user
 var defaultTable string = "users"
 
 // config acl service struct
 type ConfigACL struct {
 	Database     *sql.DB
-	TableAccount string
+	TableAccount string // setup default table if not set it's changes to defaultTable
 }
 
 type RepositoryService interface {
@@ -27,12 +32,13 @@ type RepositoryService interface {
 	GiveRoleToUser(ctx context.Context, userID uint, roleID uint) error
 }
 
+// ConfideACL interface
 type ConfideACL interface {
 	AddRole(ctx context.Context, name string) error
 	AddPermission(ctx context.Context, name string) error
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
 	AssignUserToRole(ctx context.Context, userid uint, role string) error
-	VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error)
+	PolicyACL(ctx context.Context, userid int, args string) (bool, error)
 }
 
 type service struct {
@@ -46,11 +52,11 @@ type service struct {
 //
 // Returns:
 // - a pointer to the Service struct.
-func NewService(conf ConfigACL) service {
+func NewService(conf ConfigACL) *service {
 	if conf.TableAccount == "" {
 		conf.TableAccount = defaultTable
 	}
-	return service{
+	return &service{
 		repo: repository.NewSQL(conf.Database, conf.TableAccount),
 	}
 }

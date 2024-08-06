@@ -1,6 +1,8 @@
 package confide_acl
 
-import "context"
+import (
+	"context"
+)
 
 // AddRole sets a new role in the system.
 //
@@ -26,6 +28,16 @@ func (s *service) AddRole(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the permission creation fails, otherwise nil.
+//
+// Example:
+//
+//	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//
+// defer cancel()
+//
+//	if err := service.AddPermission(ctx, "create_user"); err != nil {
+//		log.Fatalf("failed to create permission: %v", err)
+//	}
 func (s *service) AddPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
@@ -88,7 +100,34 @@ func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string
 	return nil
 }
 
-// VerifyPrivilege verifies if a user has the required role and permission to access a resource.
+// PolicyACL checks the user's permission to perform an action based on the provided role and permission.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user.
+// - args: A string representing the role or permission.
+//
+// Returns:
+// - bool: True if the user has the permission, false otherwise.
+// - error: An error if there was a problem parsing the role or permission, or if there was an error verifying the user's privilege.
+func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool, error) {
+	// parsing string role or permission
+	parsing, err := parseRolePermission(args)
+
+	if err != nil {
+		return false, err
+	}
+
+	// verify privilege
+	verified, err := s.verifyPrivilege(ctx, userid, parsing)
+	if err != nil {
+		return false, err
+	}
+
+	return verified, nil
+}
+
+// verifyPrivilege verifies if a user has the required role and permission to access a resource.
 //
 // Parameters:
 // - ctx: The context.Context object for the request.
@@ -98,7 +137,7 @@ func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string
 // Returns:
 // - bool: True if the user has the required role and permission, false otherwise.
 // - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
-func (s *service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
+func (s *service) verifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
 	var roleaccess, permissionaccess bool = false, false
 	var errump []error
 

@@ -4,7 +4,6 @@ go 1.22.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/eben-hk/confide v1.12.1
 	github.com/stretchr/testify v1.9.0
 )
 
