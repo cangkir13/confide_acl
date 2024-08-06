@@ -26,6 +26,16 @@ func (s *service) AddRole(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the permission creation fails, otherwise nil.
+//
+// Example:
+//
+//	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//
+// defer cancel()
+//
+//	if err := service.AddPermission(ctx, "create_user"); err != nil {
+//		log.Fatalf("failed to create permission: %v", err)
+//	}
 func (s *service) AddPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
