@@ -2,7 +2,6 @@ package confide_acl
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 )
 
@@ -55,21 +54,4 @@ func parseRolePermission(input string) (RolePermission, error) {
 	}
 
 	return rp, nil
-}
-
-// extractConsumerID extracts the consumer ID from the given header value.
-//
-// Parameters:
-// - headerValue: a string representing the header value containing the consumer username.
-// example format: "consumer:1"
-// Returns:
-// - int: the extracted consumer ID.
-// - error: an error if the consumer username format is invalid.
-func extractConsumerID(headerValue string) (int, error) {
-	parts := strings.Split(headerValue, ":")
-	if len(parts) != 2 {
-		return 0, ErrInvalidConsumerFomat
-	}
-
-	return strconv.Atoi(parts[1])
 }
