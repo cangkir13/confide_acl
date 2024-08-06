@@ -10,7 +10,7 @@ import "context"
 //
 // Returns:
 // - error: An error if the role creation fails, otherwise nil.
-func (s *service) AddRole(ctx context.Context, name string) error {
+func (s *Service) AddRole(ctx context.Context, name string) error {
 	err := s.repo.CreateRole(ctx, name)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (s *service) AddRole(ctx context.Context, name string) error {
 //	if err := service.AddPermission(ctx, "create_user"); err != nil {
 //		log.Fatalf("failed to create permission: %v", err)
 //	}
-func (s *service) AddPermission(ctx context.Context, name string) error {
+func (s *Service) AddPermission(ctx context.Context, name string) error {
 	err := s.repo.CreatePermission(ctx, name)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (s *service) AddPermission(ctx context.Context, name string) error {
 //
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
-func (s *service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
+func (s *Service) AssignPermissionToRole(ctx context.Context, role string, permissions []string) error {
 	// get role id by string
 	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *service) AssignPermissionToRole(ctx context.Context, role string, permi
 //
 // Returns:
 // - error: An error if the assignment fails, otherwise nil.
-func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string) error {
+func (s *Service) AssignUserToRole(ctx context.Context, userid uint, role string) error {
 	// get role id by string
 	roleIDs, err := s.repo.GetRoleIDByName(ctx, []string{role})
 	if err != nil {
@@ -108,7 +108,7 @@ func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string
 // Returns:
 // - bool: True if the user has the required role and permission, false otherwise.
 // - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
-func (s *service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
+func (s *Service) VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
 	var roleaccess, permissionaccess bool = false, false
 	var errump []error
 

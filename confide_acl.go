@@ -41,7 +41,7 @@ type ConfideACL interface {
 	VerifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error)
 }
 
-type service struct {
+type Service struct {
 	repo repository.SQL
 }
 
@@ -52,11 +52,11 @@ type service struct {
 //
 // Returns:
 // - a pointer to the Service struct.
-func NewService(conf ConfigACL) *service {
+func NewService(conf ConfigACL) *Service {
 	if conf.TableAccount == "" {
 		conf.TableAccount = defaultTable
 	}
-	return &service{
+	return &Service{
 		repo: repository.NewSQL(conf.Database, conf.TableAccount),
 	}
 }
