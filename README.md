@@ -19,7 +19,6 @@ go get github.com/cangkir13/confide_acl
 https://github.com/cangkir13/confide_acl/blob/main/migrations/20240801_initial.sql
 ```
 #### ***Note***
-* adding field `role_name` as `string` to your current users table
 * setup REFERENCES foreign key for table `user_has_roles` and `user_has_permissions` to your users table
 
 ## Usage
