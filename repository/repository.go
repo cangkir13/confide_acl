@@ -25,6 +25,17 @@ func NewSQL(db *sql.DB, tableAccountDefault string) SQL {
 	return SQL{db: db, tableAccountDefault: tableAccountDefault}
 }
 
+type RepositoryService interface {
+	CreateRole(ctx context.Context, name string) error
+	CreatePermission(ctx context.Context, name string) error
+	GetAccountPermission(ctx context.Context, userid uint, permissionid []uint) ([]AccountPermission, error)
+	GetAccountRole(ctx context.Context, userid uint, roleid []uint) ([]AccountRole, error)
+	GetPermissionIDByName(ctx context.Context, permissions []string) ([]uint, error)
+	GetRoleIDByName(ctx context.Context, names []string) ([]uint, error)
+	GivePermissionToRole(ctx context.Context, roleID uint, permissions []uint) error
+	GiveRoleToUser(ctx context.Context, userID uint, roleID uint) error
+}
+
 // CreateRole inserts a new role into the database with the given name.
 //
 // Parameters:
@@ -152,11 +163,13 @@ func (sql *SQL) GetAccountRole(ctx context.Context, userid uint, roleid []uint) 
 	baseQuery := `
         SELECT
             a.full_name,
-            a.role_name
+            r.name AS role_name
         FROM
             user_has_roles ur
         JOIN
             ` + sql.tableAccountDefault + ` a ON ur.user_id = a.id
+		JOIN
+			roles r ON ur.role_id = r.id
         WHERE
             ur.user_id = ?
     `
@@ -207,6 +220,39 @@ func (sql *SQL) GetAccountRole(ctx context.Context, userid uint, roleid []uint) 
 	}
 
 	return results, nil
+}
+
+// GetAccountRoleByID retrieves the account role associated with a user from the SQL database based on the user ID.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userID: The ID of the user for whom the account role is being retrieved.
+//
+// Returns:
+// - AccountRole: The account role associated with the user.
+// - error: An error if the retrieval fails, otherwise nil.
+func (s *SQL) GetAccountRoleByID(ctx context.Context, userID uint) (AccountRole, error) {
+	var accountRole AccountRole
+	query := `
+		SELECT 
+			a.full_name AS fullName, 
+			r.name AS roleName 
+		FROM 
+			user_has_roles ur 
+		JOIN 
+			` + s.tableAccountDefault + ` a ON ur.user_id = a.id 
+		JOIN 
+			roles r ON ur.role_id = r.id 
+		WHERE 
+			a.id = ?
+	`
+
+	err := s.db.QueryRowContext(ctx, query, userID).Scan(&accountRole.FullName, &accountRole.RoleName)
+	if err != nil && err != sql.ErrNoRows {
+		return accountRole, err
+	}
+
+	return accountRole, nil
 }
 
 // GetPermissionIDByName retrieves the permission IDs from the database based on the provided permission names.

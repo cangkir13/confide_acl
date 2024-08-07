@@ -153,6 +153,62 @@ func TestGetRoleIDByName(t *testing.T) {
 	}
 }
 
+func TestGetRoleAccountByID(t *testing.T) {
+	tests := []struct {
+		name        string
+		userid      uint
+		setupMocks  func(mock sqlmock.Sqlmock)
+		expected    repository.AccountRole
+		expectError bool
+	}{
+		{
+			name:   "Valid role ID",
+			userid: 1,
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"id", "name"}).
+					AddRow("admin", "admin")
+				mock.ExpectQuery(regexp.QuoteMeta(
+					`SELECT  a.full_name AS fullName,  r.name AS roleName FROM  user_has_roles ur 
+					JOIN users a ON ur.user_id = a.id 
+					JOIN roles r ON ur.role_id = r.id  WHERE  a.id = ?`,
+				)).
+					WithArgs(1).
+					WillReturnRows(rows)
+			},
+			expected: repository.AccountRole{
+				FullName: "admin",
+				RoleName: "admin",
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+			}
+			defer db.Close()
+
+			repo := repository.NewSQL(db, tableuser)
+			ctx := context.Background()
+
+			tt.setupMocks(mock)
+
+			roles, err := repo.GetAccountRoleByID(ctx, tt.userid)
+
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v", tt.expectError, err)
+			}
+
+			if !reflect.DeepEqual(roles, tt.expected) {
+				t.Errorf("expected: %v, got: %v", tt.expected, roles)
+			}
+		})
+	}
+}
+
 func TestGetPermissionIDByName(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -207,7 +263,7 @@ func TestGetAccountRole(t *testing.T) {
 				rows := sqlmock.NewRows([]string{"full_name", "role_name"}).
 					AddRow("John Doe", "admin")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, a.role_name FROM user_has_roles ur JOIN users a ON ur.user_id = a.id WHERE ur.user_id = ? AND ur.role_id = ?`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, r.name AS role_name FROM user_has_roles ur JOIN users a ON ur.user_id = a.id JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND ur.role_id = ?`)).
 					WithArgs(1, 1).
 					WillReturnRows(rows)
 			},
@@ -225,7 +281,7 @@ func TestGetAccountRole(t *testing.T) {
 					AddRow("John Doe", "admin").
 					AddRow("Jane Smith", "user")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, a.role_name FROM user_has_roles ur JOIN users a ON ur.user_id = a.id WHERE ur.user_id = ? AND ur.role_id IN (?, ?)`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, r.name AS role_name FROM user_has_roles ur JOIN users a ON ur.user_id = a.id JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND ur.role_id IN (?, ?)`)).
 					WithArgs(1, 1, 2).
 					WillReturnRows(rows)
 			},

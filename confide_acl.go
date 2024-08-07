@@ -21,17 +21,6 @@ type ConfigACL struct {
 	TableAccount string // setup default table if not set it's changes to defaultTable
 }
 
-type RepositoryService interface {
-	CreateRole(ctx context.Context, name string) error
-	CreatePermission(ctx context.Context, name string) error
-	GetAccountPermission(ctx context.Context, userid uint, permissionid []uint) ([]repository.AccountPermission, error)
-	GetAccountRole(ctx context.Context, userid uint, roleid []uint) ([]repository.AccountRole, error)
-	GetPermissionIDByName(ctx context.Context, permissions []string) ([]uint, error)
-	GetRoleIDByName(ctx context.Context, names []string) ([]uint, error)
-	GivePermissionToRole(ctx context.Context, roleID uint, permissions []uint) error
-	GiveRoleToUser(ctx context.Context, userID uint, roleID uint) error
-}
-
 // ConfideACL interface
 type ConfideACL interface {
 	AddRole(ctx context.Context, name string) error
@@ -41,10 +30,6 @@ type ConfideACL interface {
 	PolicyACL(ctx context.Context, userid int, args string) (bool, error)
 }
 
-type service struct {
-	repo repository.SQL
-}
-
 // NewService creates a new instance of the Service struct.
 //
 // Parameters:
@@ -52,7 +37,7 @@ type service struct {
 //
 // Returns:
 // - a pointer to the Service struct.
-func NewService(conf ConfigACL) *service {
+func NewService(conf ConfigACL) ConfideACL {
 	if conf.TableAccount == "" {
 		conf.TableAccount = defaultTable
 	}

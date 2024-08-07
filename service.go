@@ -2,7 +2,15 @@ package confide_acl
 
 import (
 	"context"
+	"database/sql"
+	"log"
+
+	"github.com/cangkir13/confide_acl/repository"
 )
+
+type service struct {
+	repo repository.SQL
+}
 
 // AddRole sets a new role in the system.
 //
@@ -136,46 +144,28 @@ func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool,
 //
 // Returns:
 // - bool: True if the user has the required role and permission, false otherwise.
-// - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the account roles or permissions.
+// - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the superadmin status.
 func (s *service) verifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
-	var roleaccess, permissionaccess bool = false, false
 	var errump []error
 
-	// Get role IDs by name
-	if len(rp.Roles) > 0 {
-		roleIds, err := s.repo.GetRoleIDByName(ctx, rp.Roles)
-		if err != nil {
-			return false, err
-		}
-
-		if len(roleIds) > 0 {
-			hasRoles, err := s.repo.GetAccountRole(ctx, uint(userid), roleIds)
-			if err != nil {
-				roleaccess = false
-				errump = append(errump, err)
-			}
-
-			if len(hasRoles) > 0 {
-				roleaccess = true
-			}
-		}
+	// Check if user is Superadmin
+	isSuperAdmin, err := s.isSuperAdmin(ctx, uint(userid))
+	if err != nil {
+		log.Printf("Error checking superadmin status: %v", err)
+		return false, err
 	}
-	// Get permission IDs by name
-	if len(rp.Permissions) > 0 {
-		permissionIds, err := s.repo.GetPermissionIDByName(ctx, rp.Permissions)
-		if err != nil {
-			return false, err
-		}
-		if len(permissionIds) > 0 {
-			hasPermissions, err := s.repo.GetAccountPermission(ctx, uint(userid), permissionIds)
-			if err != nil {
-				permissionaccess = false
-				errump = append(errump, err)
-			}
-			if len(hasPermissions) > 0 {
-				permissionaccess = true
-			}
-		}
+	if isSuperAdmin {
+		return true, nil
+	}
+
+	roleaccess, err := s.checkRoleAccess(ctx, uint(userid), rp.Roles)
+	if err != nil {
+		errump = append(errump, err)
+	}
+
+	permissionaccess, err := s.checkPermissionAccess(ctx, uint(userid), rp.Permissions)
+	if err != nil {
+		errump = append(errump, err)
 	}
 
 	if len(errump) > 0 {
@@ -186,6 +176,60 @@ func (s *service) verifyPrivilege(ctx context.Context, userid int, rp RolePermis
 		return false, nil
 	}
 
-	// hasaccess
 	return true, nil
+}
+
+// Function to check role access
+func (s *service) checkRoleAccess(ctx context.Context, userid uint, roles []string) (bool, error) {
+	if len(roles) == 0 {
+		return false, nil
+	}
+
+	roleIDs, err := s.repo.GetRoleIDByName(ctx, roles)
+	if err != nil {
+		return false, err
+	}
+
+	if len(roleIDs) == 0 {
+		return false, nil
+	}
+
+	hasRoles, err := s.repo.GetAccountRole(ctx, userid, roleIDs)
+	if err != nil {
+		return false, err
+	}
+
+	return len(hasRoles) > 0, nil
+}
+
+// Function to check permission access
+func (s *service) checkPermissionAccess(ctx context.Context, userid uint, permissions []string) (bool, error) {
+	if len(permissions) == 0 {
+		return false, nil
+	}
+
+	permissionIDs, err := s.repo.GetPermissionIDByName(ctx, permissions)
+	if err != nil {
+		return false, err
+	}
+
+	if len(permissionIDs) == 0 {
+		return false, nil
+	}
+
+	hasPermissions, err := s.repo.GetAccountPermission(ctx, userid, permissionIDs)
+	if err != nil {
+		return false, err
+	}
+
+	return len(hasPermissions) > 0, nil
+}
+
+// Helper function to check if user is Superadmin
+func (s *service) isSuperAdmin(ctx context.Context, userid uint) (bool, error) {
+	account, err := s.repo.GetAccountRoleByID(ctx, userid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+	return account.RoleName == "Superadmin", nil
 }
