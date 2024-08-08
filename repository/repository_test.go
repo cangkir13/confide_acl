@@ -2,6 +2,7 @@ package repository_test
 
 import (
 	"context"
+	"database/sql"
 	"reflect"
 	"regexp"
 	"testing"
@@ -246,50 +247,71 @@ func TestGetPermissionIDByName(t *testing.T) {
 	}
 }
 
-func TestGetAccountRole(t *testing.T) {
+func TestGetAccountHasPermission(t *testing.T) {
 	tests := []struct {
 		name        string
 		userid      uint
-		roleid      []uint
+		permissions []string
 		setupMocks  func(mock sqlmock.Sqlmock)
-		expected    []repository.AccountRole
+		expected    []repository.Permission
 		expectError bool
 	}{
 		{
-			name:   "Successful query with one role",
-			userid: 1,
-			roleid: []uint{1},
+			name:        "Successful query with one permission",
+			userid:      1,
+			permissions: []string{"edit"},
 			setupMocks: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"full_name", "role_name"}).
-					AddRow("John Doe", "admin")
+				rows := sqlmock.NewRows([]string{"id", "name"}).
+					AddRow(1, "edit")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, r.name AS role_name FROM user_has_roles ur JOIN users a ON ur.user_id = a.id JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND ur.role_id = ?`)).
-					WithArgs(1, 1).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT p.id, p.name
+				FROM user_has_permissions uhp
+				JOIN permissions p ON uhp.permission_id = p.id
+				WHERE uhp.user_id = ? AND p.name IN (?)`)).
+					WithArgs(1, "edit").
 					WillReturnRows(rows)
 			},
-			expected: []repository.AccountRole{
-				{FullName: "John Doe", RoleName: "admin"},
+			expected: []repository.Permission{
+				{ID: 1, Name: "edit"},
 			},
 			expectError: false,
 		},
 		{
-			name:   "Successful query with multiple roles",
-			userid: 1,
-			roleid: []uint{1, 2},
+			name:        "Successful query with multiple permissions",
+			userid:      1,
+			permissions: []string{"edit", "delete"},
 			setupMocks: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"full_name", "role_name"}).
-					AddRow("John Doe", "admin").
-					AddRow("Jane Smith", "user")
+				rows := sqlmock.NewRows([]string{"id", "name"}).
+					AddRow(1, "edit").
+					AddRow(2, "delete")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, r.name AS role_name FROM user_has_roles ur JOIN users a ON ur.user_id = a.id JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND ur.role_id IN (?, ?)`)).
-					WithArgs(1, 1, 2).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT p.id, p.name
+				FROM user_has_permissions uhp
+				JOIN permissions p ON uhp.permission_id = p.id
+				WHERE uhp.user_id = ? AND p.name IN (?, ?)`)).
+					WithArgs(1, "edit", "delete").
 					WillReturnRows(rows)
 			},
-			expected: []repository.AccountRole{
-				{FullName: "John Doe", RoleName: "admin"},
-				{FullName: "Jane Smith", RoleName: "user"},
+			expected: []repository.Permission{
+				{ID: 1, Name: "edit"},
+				{ID: 2, Name: "delete"},
 			},
 			expectError: false,
+		},
+		{
+			name:        "Query fails",
+			userid:      1,
+			permissions: []string{"edit"},
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT p.id, p.name
+				FROM user_has_permissions uhp
+				JOIN permissions p ON uhp.permission_id = p.id
+				WHERE uhp.user_id = ? AND p.name IN (?)`)).
+					WithArgs(1, "edit").
+					WillReturnError(sqlmock.ErrCancelled)
+			},
+			expected:    nil,
+			expectError: true,
 		},
 	}
 
@@ -306,7 +328,7 @@ func TestGetAccountRole(t *testing.T) {
 			sqlInstance := repository.NewSQL(db, "users")
 
 			ctx := context.Background()
-			result, err := sqlInstance.GetAccountRole(ctx, tt.userid, tt.roleid)
+			result, err := sqlInstance.GetAccountHasPermission(ctx, tt.userid, tt.permissions)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error: %v, got: %v", tt.expectError, err)
 				return
@@ -315,54 +337,119 @@ func TestGetAccountRole(t *testing.T) {
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("expected result: %v, got: %v", tt.expected, result)
 			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
 		})
 	}
 }
 
-func TestGetAccountPermission(t *testing.T) {
+func TestGetAccountHasRolePermissions(t *testing.T) {
 	tests := []struct {
-		name         string
-		userid       uint
-		permissionid []uint
-		setupMocks   func(mock sqlmock.Sqlmock)
-		expected     []repository.AccountPermission
-		expectError  bool
+		name        string
+		userid      uint
+		roles       []string
+		setupMocks  func(mock sqlmock.Sqlmock)
+		expected    repository.RoleHasPermissions
+		expectError bool
 	}{
 		{
-			name:         "Successful query with one permission",
-			userid:       1,
-			permissionid: []uint{1},
+			name:   "Successful query with one role",
+			userid: 1,
+			roles:  []string{"admin"},
 			setupMocks: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"full_name", "permission_name"}).
-					AddRow("John Doe", "edit")
+				rows := sqlmock.NewRows([]string{"r.id", "p.id", "p.name"}).
+					AddRow(1, 1, "admin.post").
+					AddRow(1, 2, "admin.get")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, p.name AS permission_name FROM user_has_permissions up JOIN users a ON up.user_id = a.id JOIN permissions p ON up.permission_id = p.id WHERE up.user_id = ? AND up.permission_id IN (?)`)).
-					WithArgs(1, 1).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT r.id, p.id, p.name
+					FROM user_has_roles ur
+					JOIN roles r ON ur.role_id = r.id
+					JOIN role_has_permissions rhp ON rhp.role_id = r.id
+					JOIN permissions p ON rhp.permission_id = p.id
+					WHERE ur.user_id = ? AND r.name IN (?)`)).
+					WithArgs(1, "admin").
 					WillReturnRows(rows)
 			},
-			expected: []repository.AccountPermission{
-				{FullName: "John Doe", PermissionName: "edit"},
+			expected: repository.RoleHasPermissions{
+				RoleID: 1,
+				Permission: []repository.Permission{
+					{ID: 1, Name: "admin.post"},
+					{ID: 2, Name: "admin.get"},
+				},
 			},
 			expectError: false,
 		},
 		{
-			name:         "Successful query with multiple permissions",
-			userid:       1,
-			permissionid: []uint{1, 2},
+			name:   "Successful query with multiple roles",
+			userid: 1,
+			roles:  []string{"admin", "user"},
 			setupMocks: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"full_name", "permission_name"}).
-					AddRow("John Doe", "edit").
-					AddRow("John Doe", "delete")
+				rows := sqlmock.NewRows([]string{"r.id", "p.id", "p.name"}).
+					AddRow(1, 1, "admin.post").
+					AddRow(1, 2, "admin.get").
+					AddRow(2, 3, "user.view")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT a.full_name, p.name AS permission_name FROM user_has_permissions up JOIN users a ON up.user_id = a.id JOIN permissions p ON up.permission_id = p.id WHERE up.user_id = ? AND up.permission_id IN (?, ?)`)).
-					WithArgs(1, 1, 2).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT r.id, p.id, p.name
+					FROM user_has_roles ur
+					JOIN roles r ON ur.role_id = r.id
+					JOIN role_has_permissions rhp ON rhp.role_id = r.id
+					JOIN permissions p ON rhp.permission_id = p.id
+					WHERE ur.user_id = ? AND r.name IN (?, ?)`)).
+					WithArgs(1, "admin", "user").
 					WillReturnRows(rows)
 			},
-			expected: []repository.AccountPermission{
-				{FullName: "John Doe", PermissionName: "edit"},
-				{FullName: "John Doe", PermissionName: "delete"},
+			expected: repository.RoleHasPermissions{
+				RoleID: 2,
+				Permission: []repository.Permission{
+					{ID: 1, Name: "admin.post"},
+					{ID: 2, Name: "admin.get"},
+					{ID: 3, Name: "user.view"},
+				},
 			},
 			expectError: false,
+		},
+		{
+			name:   "Query returns no rows",
+			userid: 1,
+			roles:  []string{"nonexistent_role"},
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"r.id", "p.id", "p.name"})
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT r.id, p.id, p.name
+					FROM user_has_roles ur
+					JOIN roles r ON ur.role_id = r.id
+					JOIN role_has_permissions rhp ON rhp.role_id = r.id
+					JOIN permissions p ON rhp.permission_id = p.id
+					WHERE ur.user_id = ? AND r.name IN (?)`)).
+					WithArgs(1, "nonexistent_role").
+					WillReturnRows(rows)
+			},
+			expected: repository.RoleHasPermissions{
+				RoleID:     0,
+				Permission: nil,
+			},
+			expectError: false,
+		},
+		{
+			name:   "Query returns an error",
+			userid: 1,
+			roles:  []string{"admin"},
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT r.id, p.id, p.name
+					FROM user_has_roles ur
+					JOIN roles r ON ur.role_id = r.id
+					JOIN role_has_permissions rhp ON rhp.role_id = r.id
+					JOIN permissions p ON rhp.permission_id = p.id
+					WHERE ur.user_id = ? AND r.name IN (?)`)).
+					WithArgs(1, "admin").
+					WillReturnError(sql.ErrConnDone)
+			},
+			expected: repository.RoleHasPermissions{
+				RoleID:     0,
+				Permission: nil,
+			},
+			expectError: true,
 		},
 	}
 
@@ -376,10 +463,10 @@ func TestGetAccountPermission(t *testing.T) {
 
 			tt.setupMocks(mock)
 
-			sqlInstance := repository.NewSQL(db, "users")
+			sqlInstance := repository.NewSQL(db, tableuser)
 
 			ctx := context.Background()
-			result, err := sqlInstance.GetAccountPermission(ctx, tt.userid, tt.permissionid)
+			result, err := sqlInstance.GetAccountHasRolePermissions(ctx, tt.userid, tt.roles)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error: %v, got: %v", tt.expectError, err)
 				return
