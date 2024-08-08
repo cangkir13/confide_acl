@@ -211,6 +211,20 @@ func (sql *SQL) GetRoleIDByName(ctx context.Context, roles []string) ([]uint, er
 	return roleIDs, nil
 }
 
+// GetAccountHasPermission retrieves the permissions associated with a user from the SQL database.
+//
+// Description:
+// This function retrieves the permissions associated with a user from the SQL database based on the user ID and permission names.
+// table user_has_permissions.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user for whom the permissions are being retrieved.
+// - ps: A slice of strings representing the names of the permissions to be retrieved.
+//
+// Returns:
+// - []Permission: A slice of Permission structs representing the user's permissions.
+// - error: An error if the retrieval fails, otherwise nil.
 func (s *SQL) GetAccountHasPermission(ctx context.Context, userid uint, ps []string) ([]Permission, error) {
 	var permissions []Permission
 
