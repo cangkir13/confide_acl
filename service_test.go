@@ -1,4 +1,4 @@
-package confide_acl
+package confide_acl_test
 
 import (
 	"context"
@@ -6,22 +6,21 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/cangkir13/confide_acl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var tableuser string = "users"
 
 func TestCreateRole(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
 
-	conf := ConfigACL{
+	conf := confide_acl.ConfigACL{
 		Database:     db,
 		TableAccount: "test",
 	}
-	service := NewService(conf)
+	service := confide_acl.NewService(conf)
 
 	// Periksa format dan ekspektasi query
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO roles (name) VALUES (?)")).
@@ -39,11 +38,11 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	conf := ConfigACL{
+	conf := confide_acl.ConfigACL{
 		Database:     db,
 		TableAccount: "test",
 	}
-	service := NewService(conf)
+	service := confide_acl.NewService(conf)
 
 	// Periksa format dan ekspektasi query
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO permissions (name) VALUES (?)")).
@@ -61,11 +60,11 @@ func TestAssignPermissionToRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	conf := ConfigACL{
+	conf := confide_acl.ConfigACL{
 		Database:     db,
 		TableAccount: "test",
 	}
-	service := NewService(conf)
+	service := confide_acl.NewService(conf)
 
 	// Define test values
 	roleName := "admin"
@@ -122,11 +121,11 @@ func TestAssignUserToRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	conf := ConfigACL{
+	conf := confide_acl.ConfigACL{
 		Database:     db,
 		TableAccount: "users",
 	}
-	svc := NewService(conf)
+	svc := confide_acl.NewService(conf)
 
 	tests := []struct {
 		name          string

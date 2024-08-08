@@ -3,7 +3,7 @@ package confide_acl
 import (
 	"context"
 	"database/sql"
-	"log"
+	"strings"
 
 	"github.com/cangkir13/confide_acl/repository"
 )
@@ -118,16 +118,16 @@ func (s *service) AssignUserToRole(ctx context.Context, userid uint, role string
 // Returns:
 // - bool: True if the user has the permission, false otherwise.
 // - error: An error if there was a problem parsing the role or permission, or if there was an error verifying the user's privilege.
-func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool, error) {
+func (s *service) PolicyACL(ctx context.Context, userid int, args, module, method string) (bool, error) {
 	// parsing string role or permission
-	parsing, err := parseRolePermission(args)
+	rp, err := parseRolePermission(args)
 
 	if err != nil {
 		return false, err
 	}
 
 	// verify privilege
-	verified, err := s.verifyPrivilege(ctx, userid, parsing)
+	verified, err := s.verifyPrivilege(ctx, userid, rp, module, method)
 	if err != nil {
 		return false, err
 	}
@@ -145,84 +145,92 @@ func (s *service) PolicyACL(ctx context.Context, userid int, args string) (bool,
 // Returns:
 // - bool: True if the user has the required role and permission, false otherwise.
 // - error: An error if there was an issue retrieving the role or permission IDs, or if there was an error retrieving the superadmin status.
-func (s *service) verifyPrivilege(ctx context.Context, userid int, rp RolePermission) (bool, error) {
-	var errump []error
+func (s *service) verifyPrivilege(ctx context.Context, userid int, rp RolePermission, module, method string) (bool, error) {
+	var errump error
+
+	module = strings.ToLower(module)
+	method = strings.ToLower(method)
 
 	// Check if user is Superadmin
 	isSuperAdmin, err := s.isSuperAdmin(ctx, uint(userid))
 	if err != nil {
-		log.Printf("Error checking superadmin status: %v", err)
 		return false, err
 	}
 	if isSuperAdmin {
 		return true, nil
 	}
 
-	roleaccess, err := s.checkRoleAccess(ctx, uint(userid), rp.Roles)
+	// Check if user has role access with filtered permissions module and method
+	roleaccess, err := s.checkRoleAccess(ctx, uint(userid), rp.Roles, module, method)
 	if err != nil {
-		errump = append(errump, err)
+		errump = err
 	}
 
-	permissionaccess, err := s.checkPermissionAccess(ctx, uint(userid), rp.Permissions)
+	if roleaccess {
+		return true, nil
+	}
+
+	// Check if user has permission access with filtered permissions module and method
+	permissionaccess, err := s.checkPermissionAccess(ctx, uint(userid), rp.Permissions, module, method)
 	if err != nil {
-		errump = append(errump, err)
+		errump = err
 	}
 
-	if len(errump) > 0 {
-		return false, errump[0]
+	if permissionaccess {
+		return true, nil
 	}
 
-	if !roleaccess && !permissionaccess {
-		return false, nil
-	}
-
-	return true, nil
+	return false, errump
 }
 
 // Function to check role access
-func (s *service) checkRoleAccess(ctx context.Context, userid uint, roles []string) (bool, error) {
+func (s *service) checkRoleAccess(ctx context.Context, userid uint, roles []string, module, method string) (bool, error) {
 	if len(roles) == 0 {
 		return false, nil
 	}
 
-	roleIDs, err := s.repo.GetRoleIDByName(ctx, roles)
+	// Get the permissions associated with the user's roles and permisison list
+	garp, err := s.repo.GetAccountHasRolePermissions(ctx, userid, roles)
 	if err != nil {
 		return false, err
 	}
 
-	if len(roleIDs) == 0 {
-		return false, nil
+	// Construct the permission name from module and method
+	permissionName := module + "." + method
+
+	// Check if the user has the required permission
+	for _, perm := range garp.Permission {
+		if perm.Name == permissionName {
+			return true, nil
+		}
 	}
 
-	hasRoles, err := s.repo.GetAccountRole(ctx, userid, roleIDs)
-	if err != nil {
-		return false, err
-	}
-
-	return len(hasRoles) > 0, nil
+	return false, nil
 }
 
 // Function to check permission access
-func (s *service) checkPermissionAccess(ctx context.Context, userid uint, permissions []string) (bool, error) {
+func (s *service) checkPermissionAccess(ctx context.Context, userid uint, permissions []string, module, method string) (bool, error) {
 	if len(permissions) == 0 {
 		return false, nil
 	}
 
-	permissionIDs, err := s.repo.GetPermissionIDByName(ctx, permissions)
+	// Get the permissions associated with the user's roles and permisison list
+	gahp, err := s.repo.GetAccountHasPermission(ctx, userid, permissions)
 	if err != nil {
 		return false, err
 	}
 
-	if len(permissionIDs) == 0 {
-		return false, nil
+	// Construct the permission name from module and method
+	permissionName := module + "." + method
+
+	// Check if the user has the required permission
+	for _, perm := range gahp {
+		if perm.Name == permissionName {
+			return true, nil
+		}
 	}
 
-	hasPermissions, err := s.repo.GetAccountPermission(ctx, userid, permissionIDs)
-	if err != nil {
-		return false, err
-	}
-
-	return len(hasPermissions) > 0, nil
+	return false, nil
 }
 
 // Helper function to check if user is Superadmin
@@ -231,5 +239,5 @@ func (s *service) isSuperAdmin(ctx context.Context, userid uint) (bool, error) {
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
-	return account.RoleName == "Superadmin", nil
+	return account.RoleName == "Superadmin" || account.RoleName == "Admin", nil
 }

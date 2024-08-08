@@ -28,8 +28,8 @@ func NewSQL(db *sql.DB, tableAccountDefault string) SQL {
 type RepositoryService interface {
 	CreateRole(ctx context.Context, name string) error
 	CreatePermission(ctx context.Context, name string) error
-	GetAccountPermission(ctx context.Context, userid uint, permissionid []uint) ([]AccountPermission, error)
-	GetAccountRole(ctx context.Context, userid uint, roleid []uint) ([]AccountRole, error)
+	GetAccountHasPermission(ctx context.Context, userid uint, ps []string) ([]Permission, error)
+	GetAccountHasRolePermissions(ctx context.Context, userid uint, roleID []uint) (RoleHasPermissions, error)
 	GetPermissionIDByName(ctx context.Context, permissions []string) ([]uint, error)
 	GetRoleIDByName(ctx context.Context, names []string) ([]uint, error)
 	GivePermissionToRole(ctx context.Context, roleID uint, permissions []uint) error
@@ -76,150 +76,6 @@ func (sql *SQL) CreatePermission(ctx context.Context, name string) error {
 		return fmt.Errorf("failed to create permission with name %s: %w", name, err)
 	}
 	return nil
-}
-
-// GetAccountPermission retrieves the account permissions associated with a user from the SQL database.
-//
-// Parameters:
-// - ctx: The context.Context object for the request.
-// - userid: The ID of the user for whom the permissions are being retrieved.
-// - permissionid: A slice of uint representing the IDs of the permissions to be retrieved.
-//
-// Returns:
-// - []AccountPermission: A slice of AccountPermission structs representing the account permissions associated with the user.
-// - error: An error if the retrieval fails, otherwise nil.
-func (sql *SQL) GetAccountPermission(ctx context.Context, userid uint, permissionid []uint) ([]AccountPermission, error) {
-	// Base query
-	baseQuery := `
-		SELECT
-			a.full_name,
-			p.name AS permission_name
-		FROM
-			user_has_permissions up
-		JOIN
-			` + sql.tableAccountDefault + ` a ON up.user_id = a.id
-		JOIN
-			permissions p ON up.permission_id = p.id
-		WHERE
-			up.user_id = ?
-	`
-
-	// Prepare query based on permissionid length
-	var query string
-	var args []interface{}
-	args = append(args, userid)
-
-	if len(permissionid) > 0 {
-		// Multiple permission IDs
-		placeholders := make([]string, len(permissionid))
-		for i := range placeholders {
-			placeholders[i] = "?"
-		}
-		placeholdersStr := strings.Join(placeholders, ", ")
-		query = baseQuery + ` AND up.permission_id IN (` + placeholdersStr + `)`
-		args = append(args, convertUintSliceToInterfaceSlice(permissionid)...)
-	} else {
-		// No permission ID provided, use the base query without additional conditions
-		query = baseQuery
-	}
-
-	// Execute the query
-	rows, err := sql.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Process results
-	var results []AccountPermission
-	for rows.Next() {
-		var accountPermission AccountPermission
-		if err := rows.Scan(&accountPermission.FullName, &accountPermission.PermissionName); err != nil {
-			return nil, err
-		}
-		results = append(results, accountPermission)
-	}
-
-	// Check for any row errors
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return results, nil
-}
-
-// GetAccountRole retrieves the account roles associated with a user from the SQL database.
-//
-// Parameters:
-// - ctx: The context.Context object for the request.
-// - userid: The ID of the user for whom the roles are being retrieved.
-// - roleid: A slice of uint representing the IDs of the roles to be retrieved.
-//
-// Returns:
-// - []AccountRole: A slice of AccountRole structs representing the account roles associated with the user.
-// - error: An error if the retrieval fails, otherwise nil.
-func (sql *SQL) GetAccountRole(ctx context.Context, userid uint, roleid []uint) ([]AccountRole, error) {
-	// Base query
-	baseQuery := `
-        SELECT
-            a.full_name,
-            r.name AS role_name
-        FROM
-            user_has_roles ur
-        JOIN
-            ` + sql.tableAccountDefault + ` a ON ur.user_id = a.id
-		JOIN
-			roles r ON ur.role_id = r.id
-        WHERE
-            ur.user_id = ?
-    `
-
-	// Prepare query based on roleid length
-	var query string
-	var args []interface{}
-	args = append(args, userid)
-
-	if len(roleid) > 1 {
-		// Multiple role IDs
-		placeholders := make([]string, len(roleid))
-		for i := range placeholders {
-			placeholders[i] = "?"
-		}
-		placeholdersStr := strings.Join(placeholders, ", ")
-		query = baseQuery + ` AND ur.role_id IN (` + placeholdersStr + `)`
-		args = append(args, convertUintSliceToInterfaceSlice(roleid)...)
-	} else if len(roleid) == 1 {
-		// Single role ID
-		query = baseQuery + ` AND ur.role_id = ?`
-		args = append(args, roleid[0])
-	} else {
-		// No role ID provided, should not happen based on requirements
-		return nil, errors.New("roleid cannot be empty")
-	}
-
-	// Execute the query
-	rows, err := sql.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Process results
-	var results []AccountRole
-	for rows.Next() {
-		var accountRole AccountRole
-		if err := rows.Scan(&accountRole.FullName, &accountRole.RoleName); err != nil {
-			return nil, err
-		}
-		results = append(results, accountRole)
-	}
-
-	// Check for any row errors
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return results, nil
 }
 
 // GetAccountRoleByID retrieves the account role associated with a user from the SQL database based on the user ID.
@@ -355,6 +211,110 @@ func (sql *SQL) GetRoleIDByName(ctx context.Context, roles []string) ([]uint, er
 	return roleIDs, nil
 }
 
+func (s *SQL) GetAccountHasPermission(ctx context.Context, userid uint, ps []string) ([]Permission, error) {
+	var permissions []Permission
+
+	baseQuery := `SELECT p.id, p.name
+				FROM user_has_permissions uhp
+				JOIN permissions p ON uhp.permission_id = p.id
+				WHERE uhp.user_id = ?`
+
+	// Prepare query based on roles length
+	var query string
+	var args []interface{}
+	args = append(args, userid)
+
+	placeholders := make([]string, len(ps))
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+
+	placeholdersStr := strings.Join(placeholders, ", ")
+	query = baseQuery + ` AND p.name IN (` + placeholdersStr + `)`
+	args = append(args, convertStringSliceToInterfaceSlice(ps)...)
+
+	// execute query
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var permission Permission
+		if err := rows.Scan(&permission.ID, &permission.Name); err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, permission)
+	}
+
+	return permissions, nil
+}
+
+// GetAccountHasRolePermissions retrieves the role permissions associated with a user from the SQL database.
+//
+// Parameters:
+// - ctx: The context.Context object for the request.
+// - userid: The ID of the user for whom the role permissions are being retrieved.
+// - roles: A slice of strings representing the names of the roles to be retrieved.
+//
+// Returns:
+// - RoleHasPermissions: A struct containing the role ID and a slice of Permission structs representing the role permissions.
+// - error: An error if the retrieval fails, otherwise nil.
+func (sql *SQL) GetAccountHasRolePermissions(ctx context.Context, userid uint, roles []string) (RoleHasPermissions, error) {
+	var rolePermissions RoleHasPermissions
+	var permissions []Permission
+
+	baseQuery := `SELECT r.id, p.id, p.name
+				FROM user_has_roles ur
+				JOIN roles r ON ur.role_id = r.id
+				JOIN role_has_permissions rhp ON rhp.role_id = r.id
+				JOIN permissions p ON rhp.permission_id = p.id
+				WHERE ur.user_id = ? `
+
+	// Prepare query based on roles length
+	var query string
+	var args []interface{}
+	args = append(args, userid)
+
+	placeholders := make([]string, len(roles))
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+
+	placeholdersStr := strings.Join(placeholders, ", ")
+	query = baseQuery + ` AND r.name IN (` + placeholdersStr + `)`
+	args = append(args, convertStringSliceToInterfaceSlice(roles)...)
+
+	// Execute query
+	rows, err := sql.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return rolePermissions, err
+	}
+	defer rows.Close()
+
+	var roleid uint
+	for rows.Next() {
+		var permission Permission
+		if err := rows.Scan(&roleid, &permission.ID, &permission.Name); err != nil {
+			return rolePermissions, err
+		}
+		permissions = append(permissions, permission)
+	}
+
+	if err := rows.Err(); err != nil {
+		return rolePermissions, err
+	}
+
+	// Assuming only one role ID is returned
+	if len(permissions) > 0 {
+		rolePermissions.RoleID = roleid
+	}
+	rolePermissions.Permission = permissions
+
+	return rolePermissions, nil
+}
+
 // GivePermissionToRole assigns a list of permissions to a role in the SQL database.
 //
 // Parameters:
@@ -412,8 +372,8 @@ func (sql *SQL) GiveRoleToUser(ctx context.Context, userID uint, role uint) erro
 	return nil
 }
 
-// Helper function to convert []uint to []interface{}
-func convertUintSliceToInterfaceSlice(slice []uint) []interface{} {
+// Helper function to convert []sting to []interface{}
+func convertStringSliceToInterfaceSlice(slice []string) []interface{} {
 	result := make([]interface{}, len(slice))
 	for i, v := range slice {
 		result[i] = v

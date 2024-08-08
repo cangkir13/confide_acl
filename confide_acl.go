@@ -27,7 +27,7 @@ type ConfideACL interface {
 	AddPermission(ctx context.Context, name string) error
 	AssignPermissionToRole(ctx context.Context, role string, permissions []string) error
 	AssignUserToRole(ctx context.Context, userid uint, role string) error
-	PolicyACL(ctx context.Context, userid int, args string) (bool, error)
+	PolicyACL(ctx context.Context, userid int, args, module, method string) (bool, error)
 }
 
 // NewService creates a new instance of the Service struct.
