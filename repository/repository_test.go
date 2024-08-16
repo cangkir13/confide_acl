@@ -3,15 +3,22 @@ package repository_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cangkir13/confide_acl/repository"
 )
 
-var tableuser string = "users"
+var (
+	tableuser string = "users"
+
+	mockqueryInsertRole       string = "INSERT INTO roles (name) VALUES (?)"
+	mockqueryInsertPermission string = "INSERT INTO permissions (name) VALUES (?)"
+)
 
 func TestCreateRole(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -24,17 +31,50 @@ func TestCreateRole(t *testing.T) {
 	ctx := context.Background()
 	roleName := "admin"
 
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO roles (name) VALUES (?)")).
-		WithArgs(roleName).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	t.Run("Successful role creation", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertRole)).
+			WithArgs(roleName).
+			WillReturnResult(sqlmock.NewResult(1, 1))
 
-	if err := repo.CreateRole(ctx, roleName); err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
+		if err := repo.CreateRole(ctx, roleName); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+
+	t.Run("Duplicate role error", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertRole)).
+			WithArgs(roleName).
+			WillReturnError(fmt.Errorf("Error 1062: Duplicate entry '%s' for key 'name'", roleName))
+
+		err := repo.CreateRole(ctx, roleName)
+		if err != repository.ErrDuplicateRole {
+			t.Errorf("expected ErrDuplicateRole, got %v", err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+
+	t.Run("Other error", func(t *testing.T) {
+		expectedErr := fmt.Errorf("some database error")
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertRole)).
+			WithArgs(roleName).
+			WillReturnError(expectedErr)
+
+		err := repo.CreateRole(ctx, roleName)
+		if err == nil || !strings.Contains(err.Error(), expectedErr.Error()) {
+			t.Errorf("expected error containing '%s', got %v", expectedErr, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
 func TestCreatePermission(t *testing.T) {
@@ -48,17 +88,50 @@ func TestCreatePermission(t *testing.T) {
 	ctx := context.Background()
 	permissionName := "edit"
 
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO permissions (name) VALUES (?)")).
-		WithArgs(permissionName).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	t.Run("Successful permission creation", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertPermission)).
+			WithArgs(permissionName).
+			WillReturnResult(sqlmock.NewResult(1, 1))
 
-	if err := repo.CreatePermission(ctx, permissionName); err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
+		if err := repo.CreatePermission(ctx, permissionName); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+
+	t.Run("Duplicate permission error", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertPermission)).
+			WithArgs(permissionName).
+			WillReturnError(fmt.Errorf("Error 1062: Duplicate entry '%s' for key 'name'", permissionName))
+
+		err := repo.CreatePermission(ctx, permissionName)
+		if err != repository.ErrDuplicatePermission {
+			t.Errorf("expected ErrDuplicatePermission, got %v", err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+
+	t.Run("Other error", func(t *testing.T) {
+		expectedErr := fmt.Errorf("some database error")
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertPermission)).
+			WithArgs(permissionName).
+			WillReturnError(expectedErr)
+
+		err := repo.CreatePermission(ctx, permissionName)
+		if err == nil || !strings.Contains(err.Error(), expectedErr.Error()) {
+			t.Errorf("expected error containing '%s', got %v", expectedErr, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
 func TestGivePermissionToRole(t *testing.T) {
