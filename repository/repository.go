@@ -14,6 +14,7 @@ var (
 	ErrDuplicateUserRole   = errors.New("duplicate user role")
 	ErrRoleNotFound        = errors.New("role not found")
 	ErrPermissionNotFound  = errors.New("permission not found")
+	ErrorDuplicateEntry    = "Duplicate entry"
 )
 
 type SQL struct {
@@ -49,7 +50,7 @@ func (sql *SQL) CreateRole(ctx context.Context, name string) error {
 
 	_, err := sql.db.ExecContext(ctx, query, name)
 	if err != nil {
-		if strings.Contains(err.Error(), "Duplicate entry") {
+		if strings.Contains(err.Error(), ErrorDuplicateEntry) {
 			return ErrDuplicateRole
 		}
 		return fmt.Errorf("failed to create role with name %s: %w", name, err)
@@ -70,7 +71,7 @@ func (sql *SQL) CreatePermission(ctx context.Context, name string) error {
 
 	_, err := sql.db.ExecContext(ctx, query, name)
 	if err != nil {
-		if strings.Contains(err.Error(), "Duplicate entry") {
+		if strings.Contains(err.Error(), ErrorDuplicateEntry) {
 			return ErrDuplicatePermission
 		}
 		return fmt.Errorf("failed to create permission with name %s: %w", name, err)
