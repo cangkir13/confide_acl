@@ -24,10 +24,3 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=cangkir13_confide_acl
-            -Dsonar.organization=cangkir13
-            -Dsonar.sources=.
-            -Dsonar.coverage.exclusions=**/*_test.go,**/vendor/**
-            -Dsonar.exclusions=**/*_test.go
