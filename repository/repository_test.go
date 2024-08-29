@@ -77,6 +77,32 @@ func TestCreateRole(t *testing.T) {
 	})
 }
 
+func BenchmarkCreateRole(b *testing.B) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		b.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	repo := repository.NewSQL(db, tableuser)
+	ctx := context.Background()
+	roleName := "admin"
+
+	for i := 0; i < b.N; i++ {
+		mock.ExpectExec(regexp.QuoteMeta(mockqueryInsertRole)).
+			WithArgs(roleName).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		if err := repo.CreateRole(ctx, roleName); err != nil {
+			b.Errorf("unexpected error: %s", err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			b.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	}
+}
+
 func TestCreatePermission(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
