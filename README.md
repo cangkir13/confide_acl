@@ -3,6 +3,8 @@
 [![CodeQL](https://github.com/cangkir13/confide_acl/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/cangkir13/confide_acl/actions/workflows/github-code-scanning/codeql)
 [![Build](https://github.com/cangkir13/confide_acl/actions/workflows/build.yml/badge.svg)](https://github.com/cangkir13/confide_acl/actions/workflows/build.yml)
 
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-orange.svg)](https://sonarcloud.io/summary/new_code?id=cangkir13_confide_acl)
+
 
 The `confide_acl` package is a Go library designed for managing roles and permissions in an application. This package provides functionalities to create roles and permissions, as well as assign permissions to roles.
 
